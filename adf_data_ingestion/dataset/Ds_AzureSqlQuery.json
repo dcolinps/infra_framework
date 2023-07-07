@@ -1,0 +1,26 @@
+{
+	"name": "Ds_AzureSqlQuery",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Ls_AzureSql",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"secret_name": {
+					"value": "@dataset().secret_name",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"secret_name": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Ingestion"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": []
+	}
+}

@@ -1,0 +1,26 @@
+{
+	"name": "Ls_AzureSql",
+	"properties": {
+		"parameters": {
+			"secret_name": {
+				"type": "string",
+				"defaultValue": "KV-Database-Azure-BDWISECBI"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlDatabase",
+		"typeProperties": {
+			"connectionString": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "Ls_AzureKeyVault",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": {
+					"value": "@linkedService().secret_name",
+					"type": "Expression"
+				}
+			}
+		}
+	}
+}

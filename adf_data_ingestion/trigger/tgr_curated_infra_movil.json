@@ -1,0 +1,53 @@
+{
+	"name": "tgr_curated_infra_movil",
+	"properties": {
+		"annotations": [
+			"Procesamiento de Informacion de Infra Movil"
+		],
+		"runtimeState": "Started",
+		"pipeline": {
+			"pipelineReference": {
+				"referenceName": "infra_main",
+				"type": "PipelineReference"
+			},
+			"parameters": {
+				"src_name": "infra_bi_movil",
+				"batch_id": "4",
+				"job_name": "m_curated_synapse",
+				"src_schema_id_list": "150001",
+				"app_id": "0",
+				"notebook_version": "1.0",
+				"project_name": "cloud_sec",
+				"lock_name": "infra_movil",
+				"dw_schema_id": "1000033",
+				"dep_src_name": "infra_movil",
+				"aas_schema_id": "0",
+				"notebook_path": "integration_layer",
+				"silver_src_env": "0",
+				"health_check": "0"
+			}
+		},
+		"type": "TumblingWindowTrigger",
+		"typeProperties": {
+			"frequency": "Hour",
+			"interval": 24,
+			"startTime": "2022-10-13T10:30:00Z",
+			"delay": "00:00:00",
+			"maxConcurrency": 50,
+			"retryPolicy": {
+				"intervalInSeconds": 30
+			},
+			"dependsOn": [
+				{
+					"type": "TumblingWindowTriggerDependencyReference",
+					"size": "0.04:00:00",
+					"offset": "0.00:00:00",
+					"referenceTrigger": {
+						"referenceName": "tgr_ing_infra_movil",
+						"type": "TriggerReference"
+					}
+				}
+			]
+		}
+	}
+}

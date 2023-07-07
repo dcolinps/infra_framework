@@ -1,0 +1,50 @@
+{
+	"name": "Ds_Database_Infra_Sec_OP",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Ls_SqlServerDb",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"secret_name": "KV-Database-Infra-Sec"
+			}
+		},
+		"parameters": {
+			"cw_schema": {
+				"type": "string"
+			},
+			"cw_Table": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": [
+			{
+				"name": "Usuario",
+				"type": "varchar"
+			},
+			{
+				"name": "Programa",
+				"type": "varchar"
+			},
+			{
+				"name": "Opcion",
+				"type": "varchar"
+			},
+			{
+				"name": "Campo",
+				"type": "varchar"
+			}
+		],
+		"typeProperties": {
+			"schema": {
+				"value": "@dataset().cw_schema",
+				"type": "Expression"
+			},
+			"table": {
+				"value": "@dataset().cw_Table",
+				"type": "Expression"
+			}
+		}
+	}
+}

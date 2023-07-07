@@ -1,0 +1,26 @@
+{
+	"name": "Ds_SqlServerTable",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Ls_SqlServerDb",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"secret_name": {
+					"value": "@dataset().secret_name",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"secret_name": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Ingestion"
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": []
+	}
+}

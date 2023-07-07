@@ -1,0 +1,184 @@
+{
+	"name": "utl_power_bi_refresh",
+	"properties": {
+		"activities": [
+			{
+				"name": "Refresh Power BI",
+				"type": "WebHook",
+				"dependsOn": [
+					{
+						"activity": "utl_dw_start",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://prod-21.southcentralus.logic.azure.com:443/workflows/a30c6d897eb94c7cadc1ecb316554e8a/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=xD6nds7iImp84ebltqojS_9koseIBjKv6-Z-Mrulp4Y",
+					"method": "POST",
+					"body": {
+						"value": "@json(concat('{\"datasetId\":\"', pipeline().parameters.dataset_id,'\",\n\t\"emailDl\":\"', pipeline().parameters.email,'\",\n\t\"groupId\":\"', pipeline().parameters.workspace_id,\n    '\"}'))\n",
+						"type": "Expression"
+					},
+					"timeout": "01:00:00",
+					"reportStatusOnCallBack": true
+				}
+			},
+			{
+				"name": "Get Status Refresh",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Refresh Power BI",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "refresh_status",
+					"value": {
+						"value": "@activity('Refresh Power BI').output.refresh_status",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "utl_dw_start",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "utl_dw_start_stop",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"LOCK_NAME": {
+							"value": "@pipeline().parameters.lock_name",
+							"type": "Expression"
+						},
+						"DW_ACTION": "Start",
+						"AS_DW_SRC_SCHEMA": {
+							"value": "@pipeline().parameters.dep_src_schema_id",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "utl_dw_stop",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Refresh Power BI",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "utl_dw_start_stop",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"LOCK_NAME": {
+							"value": "@pipeline().parameters.lock_name",
+							"type": "Expression"
+						},
+						"DW_ACTION": "Stop",
+						"AS_DW_SRC_SCHEMA": {
+							"value": "@pipeline().parameters.dep_src_schema_id",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "If Condition1",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Get Status Refresh",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(variables('refresh_status'), 'Completed')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Set Error Pipeline",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "get_error",
+								"value": {
+									"value": "@div(1,0)",
+									"type": "Expression"
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Refresh Dataset Power BI OK",
+							"type": "Wait",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 1
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"dataset_id": {
+				"type": "string",
+				"defaultValue": "8f6c1958-b7a4-48ff-bd90-f16a58e8ecc8"
+			},
+			"workspace_id": {
+				"type": "string",
+				"defaultValue": "5ad16d6f-add3-46da-b47e-006facc86b27"
+			},
+			"email": {
+				"type": "string",
+				"defaultValue": "mario.mendez@infosapiens.mx"
+			},
+			"lock_name": {
+				"type": "string",
+				"defaultValue": "PBI"
+			},
+			"dep_src_schema_id": {
+				"type": "string",
+				"defaultValue": "1000033"
+			}
+		},
+		"variables": {
+			"refresh_status": {
+				"type": "String"
+			},
+			"get_error": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "00_Ingestion_Framework/00_Utilities"
+		},
+		"annotations": []
+	}
+}

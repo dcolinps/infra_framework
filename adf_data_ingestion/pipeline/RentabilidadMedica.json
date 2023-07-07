@@ -1,0 +1,78 @@
+{
+	"name": "RentabilidadMedica",
+	"properties": {
+		"activities": [
+			{
+				"name": "Productivo_Transform_Medico_Dev",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "1.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "Df_Transform_Medico",
+						"type": "DataFlowReference",
+						"datasetParameters": {
+							"sourceDotacionesCY": {
+								"cw_schema": "dbo",
+								"cw_table": "TempTest_t_dotaciones_cy"
+							},
+							"beakm01Agrupa": {
+								"cw_schema": "dbo",
+								"cw_table": "TempTest_beakm01agrupa"
+							},
+							"RecetasOxidom": {
+								"cw_schema": "dbo",
+								"cw_table": "TempTest_TMWIOXGRECETAINST"
+							},
+							"Renta": {
+								"cw_schema": "dbo",
+								"cw_table": "TempTest_TMAZOXRENTAPEND01"
+							},
+							"TCWIOXTPA02": {
+								"cw_schema": "dbo",
+								"cw_table": "TCWIOXTPA02"
+							},
+							"TCWIINSGPOC01": {
+								"cw_schema": "dbo",
+								"cw_table": "TCWIINSGPOC01"
+							},
+							"sinkDotacionesCY": {
+								"cw_schema": "dbo",
+								"cw_table": "beakm01agrupa"
+							},
+							"Sinkbeakm01AgrupaFiltradoCONC": {
+								"cw_schema": "dbo",
+								"cw_table": "beakm01agrupa"
+							},
+							"SinkNuevasRecetas": {
+								"cw_schema": "dbo",
+								"cw_table": "TMWIOXGRECETAINST"
+							},
+							"SinkRentaConNuevasColumnas": {
+								"cw_schema": "dbo",
+								"cw_table": "TMAZOXRENTAPEND01"
+							}
+						}
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "Fine"
+				}
+			}
+		],
+		"folder": {
+			"name": "13_RentabilidadMedica"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-04-01T20:35:32Z"
+	}
+}

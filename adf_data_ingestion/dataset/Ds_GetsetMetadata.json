@@ -1,0 +1,15 @@
+{
+	"name": "Ds_GetsetMetadata",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Ls_AzureSqlDb",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Ingestion"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": []
+	}
+}

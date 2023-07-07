@@ -1,0 +1,26 @@
+{
+	"name": "Ds_OracleTable",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Ls_OracleSqlDb",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"secret_name": {
+					"value": "@dataset().secret_name",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"secret_name": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Ingestion"
+		},
+		"annotations": [],
+		"type": "OracleTable",
+		"schema": []
+	}
+}

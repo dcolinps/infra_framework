@@ -1,0 +1,208 @@
+{
+	"name": "SQL2AZ_IMSS_Test_5dias",
+	"properties": {
+		"activities": [
+			{
+				"name": "TCWECLISUC01",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"preCopyScript": "DROP TABLE IF EXISTS TCWECLISUC01",
+						"tableOption": "autoCreate",
+						"disableMetricsCollection": false
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "Ds_Database_InfraIMSS",
+						"type": "DatasetReference",
+						"parameters": {
+							"cw_schema": "dbo",
+							"cw_table": "TCWECLISUC01"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference",
+						"parameters": {
+							"cw_schema": "dbo",
+							"cw_table": "TCWECLISUC01"
+						}
+					}
+				]
+			},
+			{
+				"name": "TMCOOXALTASXML",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"preCopyScript": "DROP TABLE IF EXISTS TMCOOXALTASXML",
+						"tableOption": "autoCreate",
+						"disableMetricsCollection": false
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "Ds_Database_InfraIMSS",
+						"type": "DatasetReference",
+						"parameters": {
+							"cw_schema": "dbo",
+							"cw_table": "TMCOOXALTASXML"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference",
+						"parameters": {
+							"cw_schema": "dbo",
+							"cw_table": "TMCOOXALTASXML"
+						}
+					}
+				]
+			},
+			{
+				"name": "TTCOOXRECETASXML",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "SELECT *\nFROM TMCOOXRECETASXML\nWHERE FechaAudit BETWEEN (SELECT CAST(DATEADD(day,-5, GETDATE()) AS DATE)) AND (SELECT CAST(DATEADD(day,+1, GETDATE()) AS DATE));",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"preCopyScript": "DROP TABLE IF EXISTS TTCOOXRECETASXML",
+						"tableOption": "autoCreate",
+						"disableMetricsCollection": false
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "Ds_Database_InfraIMSS",
+						"type": "DatasetReference",
+						"parameters": {
+							"cw_schema": "dbo",
+							"cw_table": "TMCOOXRECETASXML"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference",
+						"parameters": {
+							"cw_schema": "dbo",
+							"cw_table": "TTCOOXRECETASXML"
+						}
+					}
+				]
+			},
+			{
+				"name": "SP_5dias",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "TTCOOXRECETASXML",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[proc_Oxidom_RWS_Carga]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Ls_AzureSql",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"secret_name": "KV-Database-Azure-BDWISECBI"
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "08_IMSS"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-11-24T20:47:01Z"
+	}
+}

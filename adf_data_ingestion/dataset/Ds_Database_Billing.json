@@ -1,0 +1,15 @@
+{
+	"name": "Ds_Database_Billing",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Ls_AzureSql",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"secret_name": "KV-Database-Databricks"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": []
+	}
+}

@@ -1,0 +1,81 @@
+{
+	"name": "Carga_21hr",
+	"properties": {
+		"activities": [
+			{
+				"name": "Pipeline_21hr_IMSS",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "SQL2AZ_IMSS",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "Send_Email_Succes",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Pipeline_21hr_IMSS",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://prod-07.southcentralus.logic.azure.com:443/workflows/cb6faa66c0bd48979f0aec6eae8d7ad7/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=rUsYktCWjtzQOCVXROyUvqLPeo3DT0QGpP3gJpcFV6w",
+					"method": "POST",
+					"body": {
+						"value": "{\n    \"title\": \"@{pipeline().Pipeline} Se completó correctamente!\",\n    \"message\": \"El proceso de ingesta de datos fue un Éxito!\",\n    \"color\": \"Green\",\n    \"dataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"pipelineName\": \"@{pipeline().Pipeline}\",\n    \"pipelineRunId\": \"@{pipeline().RunId}\",\n    \"time\": \"@{utcnow()}\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Send_Email_Failure_Pipeline_21hr_IMSS",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Pipeline_21hr_IMSS",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://prod-07.southcentralus.logic.azure.com:443/workflows/cb6faa66c0bd48979f0aec6eae8d7ad7/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=rUsYktCWjtzQOCVXROyUvqLPeo3DT0QGpP3gJpcFV6w",
+					"method": "POST",
+					"body": {
+						"value": "{\n    \"title\": \"@{activity('Pipeline_21hr_IMSS').output.pipelineName} No se pudo completar!\",\n    \"message\": \"El proceso de ingesta de datos tuvo un error!\",\n    \"color\": \"Red\",\n    \"dataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"pipelineName\": \"@{activity('Pipeline_21hr_IMSS').output.pipelineName}\",\n    \"pipelineRunId\": \"@{activity('Pipeline_21hr_IMSS').output.pipelineRunId}\",\n    \"time\": \"@{utcnow()}\"\n}",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "09_Master"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-02-10T17:40:45Z"
+	}
+}

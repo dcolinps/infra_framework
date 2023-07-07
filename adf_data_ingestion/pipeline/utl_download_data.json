@@ -1,0 +1,134 @@
+{
+	"name": "utl_download_data",
+	"properties": {
+		"activities": [
+			{
+				"name": "Download Data",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Get Metadata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "@pipeline().parameters.APP_SQL_QUERY",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".csv"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "Ds_AzureSqlQuery",
+						"type": "DatasetReference",
+						"parameters": {
+							"secret_name": {
+								"value": "@activity('Get Metadata').output.firstrow.CONN_STRING",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "Ds_FileBlobCsv",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_path": {
+								"value": "@activity('Get Metadata').output.firstrow.FILE_PATH",
+								"type": "Expression"
+							},
+							"file_name": {
+								"value": "@pipeline().parameters.APP_FILE_NAME",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "Get Metadata",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT\n'@{pipeline().parameters.APP_FILE_PATH}' AS FILE_PATH,\nCONN_STRING,\nADLS_PROPERTY\nFROM dbo.CONNECTIONS_METADATA\nWHERE SRC_ID = '@{pipeline().parameters.APP_SRC_ID}'",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"APP_SRC_ID": {
+				"type": "string"
+			},
+			"APP_FILE_NAME": {
+				"type": "string"
+			},
+			"APP_SQL_QUERY": {
+				"type": "string"
+			},
+			"APP_FILE_PATH": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "00_Ingestion_Framework/00_Utilities"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-05-02T17:04:16Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

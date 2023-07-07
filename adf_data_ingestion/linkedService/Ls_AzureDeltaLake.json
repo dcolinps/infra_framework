@@ -1,0 +1,12 @@
+{
+	"name": "Ls_AzureDeltaLake",
+	"properties": {
+		"annotations": [
+			"Framework de Ingestion"
+		],
+		"type": "AzureBlobFS",
+		"typeProperties": {
+			"url": "https://adlsinfrabideltadev.dfs.core.windows.net/"
+		}
+	}
+}

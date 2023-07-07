@@ -1,0 +1,19 @@
+{
+	"name": "Ls_AzureSqlDb",
+	"properties": {
+		"annotations": [
+			"Framework de Ingestion"
+		],
+		"type": "AzureSqlDatabase",
+		"typeProperties": {
+			"connectionString": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "Ls_AzureKeyVault",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "KV-Database-Metadata-Dev"
+			}
+		}
+	}
+}

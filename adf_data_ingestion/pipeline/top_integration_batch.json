@@ -1,0 +1,357 @@
+{
+	"name": "top_integration_batch",
+	"properties": {
+		"activities": [
+			{
+				"name": "check batch_id for an application",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Get Status of Dep Src_System",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "@concat('select distinct BATCH_ID from ',pipeline().parameters.AUDIT_SCHEMA,'.JOB_BATCH_BRIDGE where src_system =''',pipeline().parameters.SRC_SYSTEM,''' and batch_id not in (1,2,7)')",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Get Status of Dep Src_System",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Check batch initiate",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "Select cast(Batch_run_id as varchar(20)) as Batch_run_id,Batch_status FROM @{pipeline().parameters.AUDIT_SCHEMA}.BATCH_RUN_STATS WHERE src_system='@{pipeline().parameters.DEP_SRC_SYSTEM}' AND BATCH_RUN_ID=(SELECT MAX(BATCH_RUN_ID) FROM @{pipeline().parameters.AUDIT_SCHEMA}.BATCH_RUN_STATS WHERE src_system='@{pipeline().parameters.DEP_SRC_SYSTEM}')",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Generate Batch_run_id for App",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Get Status of Dep Src_System",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "App_Batch_Run_id",
+					"value": {
+						"value": "@concat(substring(string(activity('Get Status of Dep Src_System').output.value[0].Batch_run_id),0,16),pipeline().parameters.APP_ID)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Iterate for all batch id",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "check batch_id for an application",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('check batch_id for an application').output.Value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Insert Batch_run_id as per the Batch_Status",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 2,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": {
+									"value": "@{pipeline().parameters.AUDIT_SCHEMA}.[INSERT_APP_BATCH_RUN_STATS]",
+									"type": "Expression"
+								},
+								"storedProcedureParameters": {
+									"APP_ID": {
+										"value": {
+											"value": "@int(pipeline().parameters.APP_ID)",
+											"type": "Expression"
+										},
+										"type": "Int16"
+									},
+									"BATCH_ID": {
+										"value": {
+											"value": "@float(item().BATCH_ID)",
+											"type": "Expression"
+										},
+										"type": "Decimal"
+									},
+									"DEP_SRC_SYSTEM": {
+										"value": {
+											"value": "@pipeline().parameters.DEP_SRC_SYSTEM",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"SRC_SYSTEM": {
+										"value": {
+											"value": "@pipeline().parameters.SRC_SYSTEM",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Ls_AzureSqlDb",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Set Prev Batch Status",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Get Status of Dep Src_System",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "Dep_Batch_Status",
+					"value": {
+						"value": "@activity('Get Status of Dep Src_System').output.value[0].Batch_status",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "check entry other than app_id 0",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Set dep_batch_run_id",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "select count(*) as Cnt from batch_run_stats where APP_ID=@{pipeline().parameters.APP_ID} and SRC_SYSTEM='@{pipeline().parameters.DEP_SRC_SYSTEM}' and batch_run_id like '@{variables('Dep_batch_run_id')}'",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Check batch initiate",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "check entry other than app_id 0",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@and(equals(activity('check entry other than app_id 0').output.firstRow.Cnt,0),greater(int(pipeline().parameters.APP_ID),0))",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Error Throw",
+							"description": "Throwing Error when parameters is null",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "error_catch",
+								"value": {
+									"value": "@div(1,0)",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Get Batch_run_id for App 0",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "select cast(max(batch_run_id) as varchar(20)) as Batch_run_id from batch_run_stats where app_id=0 and src_system='@{pipeline().parameters.DEP_SRC_SYSTEM}'",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set dep_batch_run_id",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Get Batch_run_id for App 0",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "Dep_batch_run_id",
+					"value": {
+						"value": "@concat(substring(activity('Get Batch_run_id for App 0').output.firstRow.Batch_run_id,0,15),'%')",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"SRC_SYSTEM": {
+				"type": "string"
+			},
+			"APP_ID": {
+				"type": "string"
+			},
+			"AUDIT_SCHEMA": {
+				"type": "string"
+			},
+			"DEP_SRC_SYSTEM": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"App_Batch_Run_id": {
+				"type": "String"
+			},
+			"Dep_Batch_Status": {
+				"type": "String"
+			},
+			"App_Batch_Status": {
+				"type": "String",
+				"defaultValue": "NULL"
+			},
+			"Loop_Filt": {
+				"type": "String"
+			},
+			"Wait_Time": {
+				"type": "String",
+				"defaultValue": "5"
+			},
+			"error_catch": {
+				"type": "String"
+			},
+			"Dep_batch_run_id": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "00_Ingestion_Framework/04_Top"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-12-09T07:58:59Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

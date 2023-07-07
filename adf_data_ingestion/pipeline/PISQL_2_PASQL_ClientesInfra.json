@@ -1,0 +1,67 @@
+{
+	"name": "PISQL_2_PASQL_ClientesInfra",
+	"properties": {
+		"activities": [
+			{
+				"name": "ASQLT_TCAZDCI01_Responsable",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"preCopyScript": "TRUNCATE TABLE TCAZDCI01_Responsable",
+						"tableOption": "autoCreate",
+						"disableMetricsCollection": false
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "Ds_Database_Infra_Sec_OP",
+						"type": "DatasetReference",
+						"parameters": {
+							"cw_schema": "dbo",
+							"cw_Table": "vw_bdakm01_responsable"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference",
+						"parameters": {
+							"cw_schema": "dbo",
+							"cw_table": "TCAZDCI01_Responsable"
+						}
+					}
+				]
+			}
+		],
+		"folder": {
+			"name": "04_DirectorioClientesInfra"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-02-10T02:20:24Z"
+	}
+}

@@ -1,0 +1,146 @@
+{
+	"name": "Sabana_Ventas",
+	"properties": {
+		"activities": [
+			{
+				"name": "Flow_Sabana_Test_Val_Acumulada",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "TMAZCIERRES",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "1.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "Df_Sabana_Val_SucursalAcumulada",
+						"type": "DataFlowReference",
+						"parameters": {
+							"month": "month(currentDate())",
+							"year": "year(currentDate())"
+						},
+						"datasetParameters": {
+							"CatalogoSuc": {
+								"cw_schema": "dbo",
+								"cw_table": "bcbkm05"
+							},
+							"VentaxLinea": {
+								"cw_schema": "dbo",
+								"cw_table": "t_estadistica_clientelinea"
+							},
+							"ArchivoCorreos": {
+								"cw_schema": "dbo",
+								"cw_table": "Test_Correos"
+							},
+							"sink1": {
+								"cw_schema": "dbo",
+								"cw_table": "Test_ArchivoVentas_Val_Agrupadas"
+							}
+						}
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "TMAZCIERRES",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference",
+						"parameters": {
+							"cw_schema": "dbo",
+							"cw_table": "TMAZCIERRES"
+						}
+					}
+				}
+			},
+			{
+				"name": "Flow_Sabana_Test_Val",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "TMAZCIERRES",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "1.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "Df_Sabana_Val",
+						"type": "DataFlowReference",
+						"parameters": {
+							"month": "month(currentDate())",
+							"year": "year(currentDate())"
+						},
+						"datasetParameters": {
+							"CatalogoSuc": {
+								"cw_schema": "dbo",
+								"cw_table": "bcbkm05"
+							},
+							"VentaxLinea": {
+								"cw_schema": "dbo",
+								"cw_table": "t_estadistica_clientelinea"
+							},
+							"ArchivoCorreos": {
+								"cw_schema": "dbo",
+								"cw_table": "Test_Correos"
+							},
+							"sink1": {
+								"cw_schema": "dbo",
+								"cw_table": "Test_ArchivoVentas_Val"
+							}
+						}
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "Fine"
+				}
+			}
+		],
+		"folder": {
+			"name": "03_Correo"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-03-28T02:07:17Z"
+	}
+}

@@ -1,0 +1,473 @@
+{
+	"name": "top_process_batch",
+	"properties": {
+		"activities": [
+			{
+				"name": "Lookup - Batch Run ID",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Switch Batch Initiate",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "select cast(max(batch_run_id) as varchar) as batch_run_id from @{pipeline().globalParameters.abc_db_schema}.batch_run_stats where src_system = '@{pipeline().parameters.src_name}' and batch_id = @{pipeline().parameters.batch_id} and coalesce(app_id,0) = @{pipeline().parameters.app_id}",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Lookup - Batch Status",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Set Batch Run Id",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "select batch_status from @{pipeline().globalParameters.abc_db_schema}.batch_run_stats where src_system = '@{pipeline().parameters.src_name}' and batch_run_id = @{variables('batch_run_id')}",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Set Batch Run Id",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Lookup - Batch Run ID",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "batch_run_id",
+					"value": {
+						"value": "@string(activity('Lookup - Batch Run ID').output.value[0].batch_run_id)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set Schema List",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "src_schema_id_check",
+					"value": {
+						"value": "@if(equals(pipeline().parameters.src_schema_id_list,'0'),'1=1', concat('SRC_SCHEMA_ID IN (',pipeline().parameters.src_schema_id_list,')'))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Get Src ID",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "select distinct SRC_ID from @{pipeline().globalParameters.abc_db_schema}.CONNECTIONS_METADATA where SRC_NAME = '@{pipeline().parameters.src_name}'  ",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Set Obj Type",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "obj_type",
+					"value": {
+						"value": "@if(equals(pipeline().parameters.batch_id,'1'),'1=1', \nif(equals(pipeline().parameters.batch_id,'6'),'1=1',\nif(equals(pipeline().parameters.batch_id,'7'),'obj_name like ''cpip[_]%''',\nif(equals(pipeline().parameters.batch_id,'3'),'obj_name like ''g[_]%''',\nif(equals(pipeline().parameters.batch_id,'4'),'obj_name like ''cur_%''',\nif(equals(pipeline().parameters.batch_id,'5'),concat('obj_name = ''',replace(pipeline().parameters.job_name,'m_curated_consumption_aas_',''),''''),'')\n)\n)\n)\n)\n)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Switch Batch Initiate",
+				"type": "Switch",
+				"dependsOn": [
+					{
+						"activity": "Set Run Type",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@variables('run_type')",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "ing",
+							"activities": [
+								{
+									"name": "top ingestion batch",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "top_ingestion_batch",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"APP_ID": {
+												"value": "@pipeline().parameters.app_id",
+												"type": "Expression"
+											},
+											"AUDIT_SCHEMA": {
+												"value": "@pipeline().globalParameters.abc_db_schema",
+												"type": "Expression"
+											},
+											"SRC_NAME": {
+												"value": "@pipeline().parameters.src_name",
+												"type": "Expression"
+											},
+											"DEP_APP_SRC_NAME": {
+												"value": "@pipeline().parameters.dep_src_name",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "int",
+							"activities": [
+								{
+									"name": "top integration batch",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "top_integration_batch",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"SRC_SYSTEM": {
+												"value": "@pipeline().parameters.src_name",
+												"type": "Expression"
+											},
+											"APP_ID": {
+												"value": "@pipeline().parameters.app_id",
+												"type": "Expression"
+											},
+											"AUDIT_SCHEMA": {
+												"value": "@pipeline().globalParameters.abc_db_schema",
+												"type": "Expression"
+											},
+											"DEP_SRC_SYSTEM": {
+												"value": "@pipeline().parameters.dep_src_name",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "Set Run Type",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_type",
+					"value": {
+						"value": "@if(equals(pipeline().parameters.batch_id,'1'),'ing',\n if(equals(pipeline().parameters.batch_id,'6'),'msmds_load',\n if(equals(pipeline().parameters.batch_id,'7'),'custom','int')))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Check Batch Status IN PROGRESS",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Lookup - Batch Status",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set Schema List",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Get Src ID",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Set Obj Type",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('Lookup - Batch Status').output.value[0].batch_status,'IN PROGRESS')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "batch success or failed",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "check_success",
+								"value": {
+									"value": "1=1",
+									"type": "Expression"
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "middle first level process",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "middle_first_level_process",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"src_name": {
+										"value": "@pipeline().parameters.src_name",
+										"type": "Expression"
+									},
+									"job_name": {
+										"value": "@pipeline().parameters.job_name",
+										"type": "Expression"
+									},
+									"batch_id": {
+										"value": "@pipeline().parameters.batch_id",
+										"type": "Expression"
+									},
+									"app_id": {
+										"value": "@pipeline().parameters.app_id",
+										"type": "Expression"
+									},
+									"notebook_version": {
+										"value": "@pipeline().parameters.notebook_version",
+										"type": "Expression"
+									},
+									"src_id": {
+										"value": "@activity('Get Src ID').output.value[0].src_id",
+										"type": "Expression"
+									},
+									"project_name": {
+										"value": "@pipeline().parameters.project_name",
+										"type": "Expression"
+									},
+									"aas_schema_id": {
+										"value": "@pipeline().parameters.aas_schema_id",
+										"type": "Expression"
+									},
+									"notebook_path": {
+										"value": "@pipeline().parameters.notebook_path",
+										"type": "Expression"
+									},
+									"silver_src_env": {
+										"value": "@pipeline().parameters.silver_src_env",
+										"type": "Expression"
+									},
+									"src_schema_id_list": {
+										"value": "@pipeline().parameters.src_schema_id_list",
+										"type": "Expression"
+									},
+									"batch_run_id": {
+										"value": "@variables('batch_run_id')",
+										"type": "Expression"
+									},
+									"obj_type": {
+										"value": "@variables('obj_type')",
+										"type": "Expression"
+									},
+									"src_schema_id_check": {
+										"value": "@variables('src_schema_id_check')",
+										"type": "Expression"
+									},
+									"health_check": {
+										"value": "@pipeline().parameters.health_check",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"src_name": {
+				"type": "string"
+			},
+			"app_id": {
+				"type": "int"
+			},
+			"src_schema_id_list": {
+				"type": "string"
+			},
+			"batch_id": {
+				"type": "string"
+			},
+			"job_name": {
+				"type": "string"
+			},
+			"notebook_version": {
+				"type": "string"
+			},
+			"project_name": {
+				"type": "string"
+			},
+			"lock_name": {
+				"type": "string"
+			},
+			"dep_src_name": {
+				"type": "string"
+			},
+			"aas_schema_id": {
+				"type": "string"
+			},
+			"notebook_path": {
+				"type": "string"
+			},
+			"silver_src_env": {
+				"type": "string"
+			},
+			"health_check": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"batch_run_id": {
+				"type": "String"
+			},
+			"src_schema_id_check": {
+				"type": "String"
+			},
+			"batch_status": {
+				"type": "String"
+			},
+			"error_catch": {
+				"type": "String"
+			},
+			"cnt": {
+				"type": "String"
+			},
+			"operation_type": {
+				"type": "String",
+				"defaultValue": "INSERT"
+			},
+			"obj_type": {
+				"type": "String"
+			},
+			"dw_connection": {
+				"type": "String",
+				"defaultValue": "1000012"
+			},
+			"src_id": {
+				"type": "String"
+			},
+			"run_type": {
+				"type": "String"
+			},
+			"check_success": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "00_Ingestion_Framework/04_Top"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-12-09T07:59:06Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

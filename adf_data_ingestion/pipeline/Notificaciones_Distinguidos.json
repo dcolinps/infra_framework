@@ -1,0 +1,116 @@
+{
+	"name": "Notificaciones_Distinguidos",
+	"properties": {
+		"activities": [
+			{
+				"name": "NotificacionDistinguidos",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[usp_bi_notificacionDistinguidos]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Ls_AzureSql",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"secret_name": "KV-Database-Azure-BDWISECBI"
+					}
+				}
+			},
+			{
+				"name": "ScriptCorreos_ClientesDistinguidos",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "NotificacionDistinguidos",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Cluster",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/temp/Dev/Dev_ClientesDistinguidosNotificacion"
+				},
+				"linkedServiceName": {
+					"referenceName": "Ls_ConnectionDatabricks",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"cluster_version": "@activity('Cluster').output.firstRow.cluster_version",
+						"worker_count": "1",
+						"billing_name": {
+							"value": "@activity('Cluster').output.firstRow.billing_name",
+							"type": "Expression"
+						},
+						"pool_id": {
+							"value": "@activity('Cluster').output.firstRow.pool_id",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Cluster",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[dbo].[sp_get_databricks_billing]",
+						"storedProcedureParameters": {
+							"DATAFACTORY_NAME": {
+								"value": {
+									"value": "@pipeline().DataFactory",
+									"type": "Expression"
+								}
+							},
+							"PROJECT_NAME": {
+								"value": "cloud_sec"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_Database_Billing",
+						"type": "DatasetReference"
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "02_ClienesDistinguidos"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-03-25T23:35:59Z"
+	}
+}

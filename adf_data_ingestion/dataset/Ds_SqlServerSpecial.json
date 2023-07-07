@@ -1,0 +1,42 @@
+{
+	"name": "Ds_SqlServerSpecial",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Ls_SqlServerDb",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"secret_name": {
+					"value": "@dataset().secret_name",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"secret_name": {
+				"type": "string"
+			},
+			"obj_name": {
+				"type": "string"
+			},
+			"schema_name": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Ingestion"
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": {
+				"value": "@dataset().schema_name",
+				"type": "Expression"
+			},
+			"table": {
+				"value": "@dataset().obj_name",
+				"type": "Expression"
+			}
+		}
+	}
+}

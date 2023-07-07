@@ -1,0 +1,44 @@
+{
+	"name": "tgr_pbi_infra_oxid_rec_4",
+	"properties": {
+		"annotations": [
+			"Proceso de actualizacion de Power BI de Oxidom Recetas 4"
+		],
+		"runtimeState": "Started",
+		"pipeline": {
+			"pipelineReference": {
+				"referenceName": "utl_power_bi_refresh",
+				"type": "PipelineReference"
+			},
+			"parameters": {
+				"dataset_id": "d09b419b-46d8-45ce-b850-0fab6349978c",
+				"workspace_id": "d5ec86da-531a-4cb4-9168-74c78aa6f9e6",
+				"email": "david.colin@infosapiens.mx",
+				"lock_name": "PBI_Oxidom_Recetas_4",
+				"dep_src_schema_id": "1000033"
+			}
+		},
+		"type": "TumblingWindowTrigger",
+		"typeProperties": {
+			"frequency": "Hour",
+			"interval": 24,
+			"startTime": "2022-11-09T03:00:00Z",
+			"delay": "00:00:00",
+			"maxConcurrency": 50,
+			"retryPolicy": {
+				"intervalInSeconds": 30
+			},
+			"dependsOn": [
+				{
+					"type": "TumblingWindowTriggerDependencyReference",
+					"size": "0.04:00:00",
+					"offset": "0.00:00:00",
+					"referenceTrigger": {
+						"referenceName": "tgr_curated_infra_oxid_rec_4",
+						"type": "TriggerReference"
+					}
+				}
+			]
+		}
+	}
+}

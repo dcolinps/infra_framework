@@ -1,0 +1,87 @@
+{
+	"name": "utl_dw_start_stop",
+	"properties": {
+		"activities": [
+			{
+				"name": "Start AAS SQLDW",
+				"type": "WebHook",
+				"dependsOn": [
+					{
+						"activity": "Get adls prop",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@activity('Get adls prop').output.firstRow.ADLS_PROPERTY",
+						"type": "Expression"
+					},
+					"method": "POST",
+					"headers": {
+						"UserEmail": {
+							"value": "@pipeline().parameters.LOCK_NAME",
+							"type": "Expression"
+						}
+					},
+					"body": {
+						"value": "@json(concat('{\n\t\"ServerName\":\"',activity('Get adls prop').output.firstRow.DB_SRVR_NAME,'\",\n\t\"DWName\":\"',activity('Get adls prop').output.firstRow.SRC_DB_NAME,'\",\n\t\"DWAction\":\"',pipeline().parameters.DW_ACTION,'\"\n}'))",
+						"type": "Expression"
+					},
+					"timeout": "00:20:00",
+					"reportStatusOnCallBack": true
+				}
+			},
+			{
+				"name": "Get adls prop",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT left(adls_property,case when charindex('$$$$$',adls_property) = 0 then len(adls_property) else charindex('$$$$$',adls_property) -1 end) as ADLS_PROPERTY\n, SRC_DB_NAME, SUBSTRING(DB_SRVR_NAME, 0 ,CHARINDEX('.', DB_SRVR_NAME)) DB_SRVR_NAME\nFROM  @{pipeline().globalParameters.abc_db_schema}.CONNECTIONS_METADATA\nWHERE SRC_SCHEMA_ID= @{pipeline().parameters.AS_DW_SRC_SCHEMA}\n",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"LOCK_NAME": {
+				"type": "string",
+				"defaultValue": "David"
+			},
+			"DW_ACTION": {
+				"type": "string",
+				"defaultValue": "Start"
+			},
+			"AS_DW_SRC_SCHEMA": {
+				"type": "string",
+				"defaultValue": "1000033"
+			}
+		},
+		"folder": {
+			"name": "00_Ingestion_Framework/00_Utilities"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-12-09T07:58:59Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

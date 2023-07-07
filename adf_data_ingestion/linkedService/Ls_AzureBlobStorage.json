@@ -1,0 +1,11 @@
+{
+	"name": "Ls_AzureBlobStorage",
+	"properties": {
+		"annotations": [],
+		"type": "AzureBlobStorage",
+		"typeProperties": {
+			"serviceEndpoint": "https://adlsinfrabideltadev.blob.core.windows.net/",
+			"accountKind": "StorageV2"
+		}
+	}
+}

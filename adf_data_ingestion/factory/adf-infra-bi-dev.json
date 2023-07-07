@@ -1,0 +1,31 @@
+{
+	"name": "adf-infra-bi-dev",
+	"properties": {
+		"globalParameters": {
+			"abc_db_schema": {
+				"type": "string",
+				"value": "dbo"
+			},
+			"force_run": {
+				"type": "string",
+				"value": "false"
+			},
+			"adb_notebook_version": {
+				"type": "string",
+				"value": "11.0|9.0"
+			},
+			"no_synapse": {
+				"type": "string",
+				"value": "0|0|0|(keep project name when you do not want to run START or STOP scripts for Synapse"
+			},
+			"sharedrive_src": {
+				"type": "string",
+				"value": "infra_shared"
+			}
+		},
+		"globalConfigurations": {
+			"PipelineBillingEnabled": "false"
+		}
+	},
+	"location": "southcentralus"
+}

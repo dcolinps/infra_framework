@@ -1,0 +1,37 @@
+{
+	"name": "tgr_consumption_infra_precios",
+	"properties": {
+		"annotations": [
+			"Carga de Información de Precios a OnPremise"
+		],
+		"runtimeState": "Started",
+		"pipeline": {
+			"pipelineReference": {
+				"referenceName": "pl_ext_data_onprem",
+				"type": "PipelineReference"
+			}
+		},
+		"type": "TumblingWindowTrigger",
+		"typeProperties": {
+			"frequency": "Hour",
+			"interval": 24,
+			"startTime": "2022-11-05T10:30:00Z",
+			"delay": "00:00:00",
+			"maxConcurrency": 50,
+			"retryPolicy": {
+				"intervalInSeconds": 30
+			},
+			"dependsOn": [
+				{
+					"type": "TumblingWindowTriggerDependencyReference",
+					"size": "0.04:00:00",
+					"offset": "0.00:00:00",
+					"referenceTrigger": {
+						"referenceName": "tgr_curated_infra_precios",
+						"type": "TriggerReference"
+					}
+				}
+			]
+		}
+	}
+}

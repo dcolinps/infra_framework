@@ -1,0 +1,31 @@
+{
+	"name": "Ds_BronzeParquet",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Ls_AzureDeltaLake",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"bronze_path": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Ingestion"
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": {
+					"value": "@dataset().bronze_path",
+					"type": "Expression"
+				},
+				"fileSystem": "data"
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": []
+	}
+}

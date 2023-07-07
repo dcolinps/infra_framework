@@ -1,0 +1,115 @@
+{
+	"name": "utl_download_data_adb",
+	"properties": {
+		"activities": [
+			{
+				"name": "CargaTabla",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureDatabricksDeltaLakeSource",
+						"query": {
+							"value": "@{if(equals(pipeline().parameters.APP_TABLE_NAME, 'trwivtasucctecodmes01'),\n concat('Select \"',pipeline().parameters.APP_USUARIO,'\" AS session , * from ',pipeline().parameters.APP_SCHEMA,'.',pipeline().parameters.APP_TABLE_NAME,' where pTipoLinea= \"',pipeline().parameters.APP_PTIPOLINEA,'\"'), \n if(equals(pipeline().parameters.APP_TABLE_NAME, 'tmazrvtlineaejecutivo'),\n concat('Select \"',pipeline().parameters.APP_USUARIO,'\" AS session , * from ',pipeline().parameters.APP_SCHEMA,'.',pipeline().parameters.APP_TABLE_NAME,' where mes= \"',pipeline().parameters.APP_PTIPOLINEA,'\"'), \n concat('Select \"',pipeline().parameters.APP_USUARIO,'\" AS session , * from ', pipeline().parameters.APP_SCHEMA,'.',pipeline().parameters.APP_TABLE_NAME)))}",
+							"type": "Expression"
+						},
+						"exportSettings": {
+							"type": "AzureDatabricksDeltaLakeExportCommand"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".csv"
+						}
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "Ls_AzureBlobStorage",
+							"type": "LinkedServiceReference"
+						},
+						"path": {
+							"value": "@concat('output/Temporal/',pipeline().parameters.APP_FILE_NAME)",
+							"type": "Expression"
+						},
+						"enableCompression": true
+					},
+					"parallelCopies": 8
+				},
+				"inputs": [
+					{
+						"referenceName": "Ds_DeltaTable",
+						"type": "DatasetReference",
+						"parameters": {
+							"database": {
+								"value": "@pipeline().parameters.APP_SCHEMA",
+								"type": "Expression"
+							},
+							"table_name": {
+								"value": "@pipeline().parameters.APP_TABLE_NAME",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "Ds_FileBlobAdb",
+						"type": "DatasetReference",
+						"parameters": {
+							"file_name": {
+								"value": "@pipeline().parameters.APP_FILE_NAME",
+								"type": "Expression"
+							},
+							"usuario_name": {
+								"value": "@pipeline().parameters.APP_USUARIO",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			}
+		],
+		"parameters": {
+			"APP_TABLE_NAME": {
+				"type": "string"
+			},
+			"APP_FILE_NAME": {
+				"type": "string"
+			},
+			"APP_MNT_PATH": {
+				"type": "string"
+			},
+			"APP_PTIPOLINEA": {
+				"type": "string"
+			},
+			"APP_USUARIO": {
+				"type": "string"
+			},
+			"APP_ROUTE_NAME": {
+				"type": "string"
+			},
+			"APP_SCHEMA": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "00_Ingestion_Framework/00_Utilities"
+		},
+		"annotations": []
+	}
+}

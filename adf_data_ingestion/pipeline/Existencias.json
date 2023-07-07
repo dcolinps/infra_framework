@@ -1,0 +1,120 @@
+{
+	"name": "Existencias",
+	"properties": {
+		"activities": [
+			{
+				"name": "SP guarda existencia diaria",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[PROCAZGUARDAEXISTENCIADIARIA]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Ls_AzureSql",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"secret_name": "KV-Database-Azure-BDWISECBI"
+					}
+				}
+			},
+			{
+				"name": "SP EXISTENCIASDIARIASLISTADO",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "SP guarda existencia diaria",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[PROCAZEXISTENCIASDIARIASLISTADO]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Ls_AzureSql",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"secret_name": "KV-Database-Azure-BDWISECBI"
+					}
+				}
+			},
+			{
+				"name": "SP VWAZCTEXIST01 parte 1",
+				"description": "Este SP ejecuta 4 SP's:\n1. PROCAZVTADIARIA\n2. PROCAZTRANSITO\n3. PROCAZEXIPROD\n4. PROCAZJOINEXTVTAS",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[PROCAZVWEXIST]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Ls_AzureSql",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"secret_name": "KV-Database-Azure-BDWISECBI"
+					}
+				}
+			},
+			{
+				"name": "SP VWAZCTEXIST01 parte 2",
+				"description": "Este SP ejecuta 5 SP's:\n5. PROCAZCALCEXIST\n6. PROCAZCALCINCONS\n7. PROCAZCALCSINEXI\n8. PROCAZCALCAGOT\n9. PROCAZCALCPORCSI",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "SP VWAZCTEXIST01 parte 1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[PROCAZCALCVWEXIST]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Ls_AzureSql",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"secret_name": "KV-Database-Azure-BDWISECBI"
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "05_Existencias"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-02-11T15:09:16Z"
+	}
+}

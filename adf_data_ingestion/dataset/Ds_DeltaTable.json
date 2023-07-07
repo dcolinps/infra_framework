@@ -1,0 +1,70 @@
+{
+	"name": "Ds_DeltaTable",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Ls_TableDatabricks",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"database": {
+				"type": "String"
+			},
+			"table_name": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Ingestion"
+		},
+		"annotations": [],
+		"type": "AzureDatabricksDeltaLakeDataset",
+		"typeProperties": {
+			"database": {
+				"value": "@dataset().database",
+				"type": "Expression"
+			},
+			"table": {
+				"value": "@dataset().table_name",
+				"type": "Expression"
+			}
+		},
+		"schema": [
+			{
+				"name": "Fecha",
+				"type": "date"
+			},
+			{
+				"name": "Sucursal",
+				"type": "integer"
+			},
+			{
+				"name": "Codigo",
+				"type": "integer"
+			},
+			{
+				"name": "Costo",
+				"type": "decimal(18,2)"
+			},
+			{
+				"name": "Precio",
+				"type": "decimal(18,2)"
+			},
+			{
+				"name": "PrecioAnterior",
+				"type": "decimal(18,2)"
+			},
+			{
+				"name": "PrecioMostrador",
+				"type": "decimal(18,2)"
+			},
+			{
+				"name": "FechaCambioPrecio",
+				"type": "timestamp"
+			},
+			{
+				"name": "FechaAudit",
+				"type": "timestamp"
+			}
+		]
+	}
+}

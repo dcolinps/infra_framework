@@ -1,0 +1,40 @@
+{
+	"name": "Ls_ConnectionDatabricks",
+	"properties": {
+		"parameters": {
+			"cluster_version": {
+				"type": "string"
+			},
+			"worker_count": {
+				"type": "string"
+			},
+			"billing_name": {
+				"type": "string"
+			},
+			"pool_id": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureDatabricks",
+		"typeProperties": {
+			"domain": "https://adb-889022720113397.17.azuredatabricks.net",
+			"accessToken": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "Ls_AzureKeyVault",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "KV-ADB-Databricks-Token"
+			},
+			"instancePoolId": "@linkedService().pool_id",
+			"newClusterNumOfWorker": "@linkedService().worker_count",
+			"newClusterSparkEnvVars": {
+				"PYSPARK_PYTHON": "/databricks/python3/bin/python3"
+			},
+			"newClusterVersion": "@linkedService().cluster_version",
+			"newClusterInitScripts": [],
+			"clusterOption": "Fixed"
+		}
+	}
+}

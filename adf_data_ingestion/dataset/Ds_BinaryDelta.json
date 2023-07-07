@@ -1,0 +1,32 @@
+{
+	"name": "Ds_BinaryDelta",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Ls_AzureDeltaLake",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"obj_name": {
+				"type": "string"
+			},
+			"staging_path": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Ingestion"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": {
+					"value": "@concat(dataset().staging_path,'/',dataset().obj_name)",
+					"type": "Expression"
+				},
+				"fileSystem": "data"
+			}
+		}
+	}
+}

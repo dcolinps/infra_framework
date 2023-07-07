@@ -1,0 +1,1070 @@
+{
+	"name": "bottom_bronze_ing",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get Parameters for OBJ_ID",
+				"description": "Returns any parameters from metadata required for the processing pipeline being called. The output can be an empty string if no parameters are required.",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Set JOB CTL METADATA",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": {
+							"value": "@{pipeline().parameters.audit_schema}.[GET_PIPELINE_PARAMS]",
+							"type": "Expression"
+						},
+						"storedProcedureParameters": {
+							"AUDIT_SCHEMA": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.audit_schema",
+									"type": "Expression"
+								}
+							},
+							"BATCH_RUN_ID": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.batch_run_id",
+									"type": "Expression"
+								}
+							},
+							"JOB_RUN_ID": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.job_run_id",
+									"type": "Expression"
+								}
+							},
+							"OBJ_ID": {
+								"type": "Int32",
+								"value": {
+									"value": "@pipeline().parameters.obj_id",
+									"type": "Expression"
+								}
+							},
+							"OBJ_RUN_ID": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.obj_run_id",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set JOB CTL METADATA",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": {
+							"value": "@{pipeline().parameters.audit_schema}.[INSERT_JOB_CTL_METADATA]",
+							"type": "Expression"
+						},
+						"storedProcedureParameters": {
+							"BATCH_RUN_ID": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.batch_run_id",
+									"type": "Expression"
+								}
+							},
+							"OBJ_ID": {
+								"type": "Int32",
+								"value": {
+									"value": "@pipeline().parameters.obj_id",
+									"type": "Expression"
+								}
+							},
+							"SRC_SCHEMA_ID": {
+								"type": "Int32",
+								"value": {
+									"value": "@pipeline().parameters.src_schema_id",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Lookup for last status bronze",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Get Parameters for OBJ_ID",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": {
+							"value": "@{pipeline().parameters.audit_schema}.[GET_LAST_STATUS_OF_OBJ_ID]",
+							"type": "Expression"
+						},
+						"storedProcedureParameters": {
+							"JOB_RUN_ID": {
+								"type": "Decimal",
+								"value": {
+									"value": "@pipeline().parameters.job_run_id",
+									"type": "Expression"
+								}
+							},
+							"OBJ_ID": {
+								"type": "Int32",
+								"value": {
+									"value": "@pipeline().parameters.obj_id",
+									"type": "Expression"
+								}
+							},
+							"OBJ_RUN_ID": {
+								"type": "Decimal",
+								"value": {
+									"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.obj_run_id",
+									"type": "Expression"
+								}
+							},
+							"SRC_SCHEMA_ID": {
+								"type": "Decimal",
+								"value": {
+									"value": "@pipeline().parameters.src_schema_id",
+									"type": "Expression"
+								}
+							},
+							"TGT_PATH": {
+								"type": "String",
+								"value": {
+									"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.tgt_path",
+									"type": "Expression"
+								}
+							},
+							"AUDIT_SCHEMA": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.audit_schema",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "If status is BRONZE_SUCCESS",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Lookup for last status bronze",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('Lookup for last status bronze').output.firstRow.OBJ_STATUS,'BRONZE_SUCCESS')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Switch based on SRC_DB_TYPE for Bronze Layer",
+							"type": "Switch",
+							"dependsOn": [
+								{
+									"activity": "Insert New Entry to OBJ_RUN_STATS",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"on": {
+									"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.SRC_DB_TYPE",
+									"type": "Expression"
+								},
+								"cases": [
+									{
+										"value": "sql server",
+										"activities": [
+											{
+												"name": "ing_bronze_sqlserver",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "ing_bronze_sqlserver",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"schema_name": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.schema_name",
+															"type": "Expression"
+														},
+														"obj_name": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.obj_name",
+															"type": "Expression"
+														},
+														"select_stmt": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.select_stmt",
+															"type": "Expression"
+														},
+														"split_by_col": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.split_by_col",
+															"type": "Expression"
+														},
+														"conn_vault_name": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.conn_vault_name",
+															"type": "Expression"
+														},
+														"file_path": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.file_path",
+															"type": "Expression"
+														},
+														"load_type": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.load_type",
+															"type": "Expression"
+														},
+														"mappers": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.mappers",
+															"type": "Expression"
+														},
+														"obj_id": {
+															"value": "@pipeline().parameters.obj_id",
+															"type": "Expression"
+														},
+														"obj_run_id": {
+															"value": "@pipeline().parameters.obj_run_id",
+															"type": "Expression"
+														},
+														"job_run_id": {
+															"value": "@pipeline().parameters.job_run_id",
+															"type": "Expression"
+														},
+														"src_name": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.src_name",
+															"type": "Expression"
+														},
+														"src_schema_id": {
+															"value": "@pipeline().parameters.src_schema_id",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "oracle",
+										"activities": [
+											{
+												"name": "ing_bronze_oracle",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "ing_bronze_oracle",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"schema_name": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.schema_name",
+															"type": "Expression"
+														},
+														"obj_name": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.obj_name",
+															"type": "Expression"
+														},
+														"select_stmt": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.select_stmt",
+															"type": "Expression"
+														},
+														"split_by_col": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.split_by_col",
+															"type": "Expression"
+														},
+														"conn_vault_name": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.conn_vault_name",
+															"type": "Expression"
+														},
+														"file_path": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.file_path",
+															"type": "Expression"
+														},
+														"load_type": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.load_type",
+															"type": "Expression"
+														},
+														"mappers": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.mappers",
+															"type": "Expression"
+														},
+														"obj_id": {
+															"value": "@pipeline().parameters.obj_id",
+															"type": "Expression"
+														},
+														"obj_run_id": {
+															"value": "@pipeline().parameters.obj_run_id",
+															"type": "Expression"
+														},
+														"job_run_id": {
+															"value": "@pipeline().parameters.job_run_id",
+															"type": "Expression"
+														},
+														"src_name": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.src_name",
+															"type": "Expression"
+														},
+														"src_schema_id": {
+															"value": "@pipeline().parameters.src_schema_id",
+															"type": "Expression"
+														},
+														"batch_run_id": {
+															"value": "@pipeline().parameters.batch_run_id",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "sql server special",
+										"activities": [
+											{
+												"name": "ing_sqlserver_special",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "ing_bronze_sqlserver_special",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"schema_name": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.schema_name",
+															"type": "Expression"
+														},
+														"obj_name": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.obj_name",
+															"type": "Expression"
+														},
+														"select_stmt": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.select_stmt",
+															"type": "Expression"
+														},
+														"split_by_col": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.split_by_col",
+															"type": "Expression"
+														},
+														"conn_vault_name": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.conn_vault_name",
+															"type": "Expression"
+														},
+														"file_path": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.file_path",
+															"type": "Expression"
+														},
+														"load_type": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.load_type",
+															"type": "Expression"
+														},
+														"mappers": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.mappers",
+															"type": "Expression"
+														},
+														"obj_id": {
+															"value": "@pipeline().parameters.obj_id",
+															"type": "Expression"
+														},
+														"obj_run_id": {
+															"value": "@pipeline().parameters.obj_run_id",
+															"type": "Expression"
+														},
+														"job_run_id": {
+															"value": "@pipeline().parameters.job_run_id",
+															"type": "Expression"
+														},
+														"src_name": {
+															"value": "@pipeline().parameters.src_name",
+															"type": "Expression"
+														},
+														"src_schema_id": {
+															"value": "@pipeline().parameters.src_schema_id",
+															"type": "Expression"
+														},
+														"batch_run_id": {
+															"value": "@pipeline().parameters.batch_run_id",
+															"type": "Expression"
+														},
+														"audit_schema": {
+															"value": "@pipeline().parameters.audit_schema",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "sharedrive file",
+										"activities": [
+											{
+												"name": "ing_bronze_sharedrive",
+												"type": "ExecutePipeline",
+												"dependsOn": [],
+												"userProperties": [],
+												"typeProperties": {
+													"pipeline": {
+														"referenceName": "ing_bronze_sharedrive",
+														"type": "PipelineReference"
+													},
+													"waitOnCompletion": true,
+													"parameters": {
+														"sharedrive_path": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.sharedrive_path",
+															"type": "Expression"
+														},
+														"obj_name": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.obj_name",
+															"type": "Expression"
+														},
+														"column_delimiter": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.column_delimiter",
+															"type": "Expression"
+														},
+														"archive_path": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.archive_path",
+															"type": "Expression"
+														},
+														"src_name": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.src_name",
+															"type": "Expression"
+														},
+														"file_path": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.file_path",
+															"type": "Expression"
+														},
+														"conn_vault_name": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.conn_vault_name",
+															"type": "Expression"
+														},
+														"schema_name": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.schema_name",
+															"type": "Expression"
+														},
+														"obj_count": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.obj_count",
+															"type": "Expression"
+														},
+														"escape_char": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.escape_char",
+															"type": "Expression"
+														},
+														"quote_char": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.quote_char",
+															"type": "Expression"
+														},
+														"username": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.username",
+															"type": "Expression"
+														},
+														"staging_path": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.staging_path",
+															"type": "Expression"
+														},
+														"obj_id": {
+															"value": "@pipeline().parameters.obj_id",
+															"type": "Expression"
+														},
+														"obj_run_id": {
+															"value": "@pipeline().parameters.obj_run_id",
+															"type": "Expression"
+														},
+														"job_run_id": {
+															"value": "@pipeline().parameters.job_run_id",
+															"type": "Expression"
+														},
+														"src_schema_id": {
+															"value": "@pipeline().parameters.src_schema_id",
+															"type": "Expression"
+														},
+														"batch_run_id": {
+															"value": "@pipeline().parameters.batch_run_id",
+															"type": "Expression"
+														},
+														"audit_schema": {
+															"value": "@pipeline().parameters.audit_schema",
+															"type": "Expression"
+														},
+														"encoding": {
+															"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.encoding",
+															"type": "Expression"
+														}
+													}
+												}
+											}
+										]
+									}
+								],
+								"defaultActivities": [
+									{
+										"name": "SRC_DB_TYPE not found",
+										"type": "SetVariable",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "errorCatch",
+											"value": {
+												"value": "@div(1,0)",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "Update Obj Run Stats to FAILED",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Switch based on SRC_DB_TYPE for Bronze Layer",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 2,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": {
+									"value": "@{pipeline().parameters.audit_schema}.[SET_OBJ_RUN_STATS]",
+									"type": "Expression"
+								},
+								"storedProcedureParameters": {
+									"JOB_RUN_ID": {
+										"value": {
+											"value": "@pipeline().parameters.job_run_id",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"OBJ_ID": {
+										"value": {
+											"value": "@pipeline().parameters.obj_id",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"OBJ_RUN_ID": {
+										"value": {
+											"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.obj_run_id",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"OBJ_STATUS": {
+										"value": "FAILED",
+										"type": "String"
+									},
+									"OPERATION_TYPE": {
+										"value": "UPDATE",
+										"type": "String"
+									},
+									"PIPELINE_RUN_ID": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"SOURCE_COUNT": {
+										"value": null,
+										"type": "Int64"
+									},
+									"SRC_NAME": {
+										"value": {
+											"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.src_name",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"SRC_PATH": {
+										"value": "",
+										"type": "String"
+									},
+									"SRC_SCHEMA_ID": {
+										"value": {
+											"value": "@pipeline().parameters.src_schema_id",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"TARGET_COUNT": {
+										"value": null,
+										"type": "Int64"
+									},
+									"TGT_PATH": {
+										"value": {
+											"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.tgt_path",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Ls_AzureSqlDb",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "Bronze Ingestion Failed",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Update Obj Run Stats to FAILED",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "errorCatch",
+								"value": {
+									"value": "@div(1,0)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Insert New Entry to OBJ_RUN_STATS",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 2,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderStoredProcedureName": {
+										"value": "@{pipeline().parameters.audit_schema}.[SET_OBJ_RUN_STATS]",
+										"type": "Expression"
+									},
+									"storedProcedureParameters": {
+										"JOB_RUN_ID": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.job_run_id",
+												"type": "Expression"
+											}
+										},
+										"OBJ_ID": {
+											"type": "Int32",
+											"value": {
+												"value": "@pipeline().parameters.obj_id",
+												"type": "Expression"
+											}
+										},
+										"OBJ_RUN_ID": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.obj_run_id",
+												"type": "Expression"
+											}
+										},
+										"OBJ_STATUS": {
+											"type": "String",
+											"value": "IN PROGRESS"
+										},
+										"OPERATION_TYPE": {
+											"type": "String",
+											"value": "INSERT"
+										},
+										"PIPELINE_RUN_ID": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().RunId",
+												"type": "Expression"
+											}
+										},
+										"SOURCE_COUNT": {
+											"type": "Int64",
+											"value": null
+										},
+										"SRC_NAME": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.src_name",
+												"type": "Expression"
+											}
+										},
+										"SRC_PATH": {
+											"type": "String",
+											"value": null
+										},
+										"SRC_SCHEMA_ID": {
+											"type": "Int32",
+											"value": {
+												"value": "@pipeline().parameters.src_schema_id",
+												"type": "Expression"
+											}
+										},
+										"TARGET_COUNT": {
+											"type": "Int64",
+											"value": null
+										},
+										"TGT_PATH": {
+											"type": "String",
+											"value": null
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "Ds_GetsetMetadata",
+									"type": "DatasetReference"
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Bronze Layer status is already BRONZE_SUCCESS",
+							"type": "Wait",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 1
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "2nd status check",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "If status is BRONZE_SUCCESS",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT \nCASE\nWHEN COUNT(*) >0 THEN 'SUCCESS'\nELSE 'BRONZE_SUCCESS'\nEND AS OBJ_STATUS\nFROM @{pipeline().parameters.audit_schema}.OBJ_RUN_STATS \nWHERE \nOBJ_RUN_ID =  @{pipeline().parameters.obj_run_id}\nAND JOB_RUN_ID=  @{pipeline().parameters.job_run_id}\nAND SRC_SCHEMA_ID= @{pipeline().parameters.src_schema_id}\nAND OBJ_ID = @{pipeline().parameters.obj_id}\nAND OBJ_STATUS='SUCCESS'",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "If status is SUCCESS",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "2nd status check",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('2nd status check').output.firstRow.OBJ_STATUS,'SUCCESS')\n\n",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "bottom silver ing",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "bottom_silver_ing",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"batch_run_id": {
+										"value": "@pipeline().parameters.batch_run_id",
+										"type": "Expression"
+									},
+									"job_run_id": {
+										"value": "@pipeline().parameters.job_run_id",
+										"type": "Expression"
+									},
+									"src_id": {
+										"value": "@pipeline().parameters.src_id",
+										"type": "Expression"
+									},
+									"src_schema_id": {
+										"value": "@pipeline().parameters.src_schema_id",
+										"type": "Expression"
+									},
+									"audit_schema": {
+										"value": "@pipeline().parameters.audit_schema",
+										"type": "Expression"
+									},
+									"project_name": {
+										"value": "@pipeline().parameters.project_name",
+										"type": "Expression"
+									},
+									"notebook_version": {
+										"value": "@if(\n    equals(pipeline().parameters.notebook_version,'0'),split(pipeline().globalParameters.adb_notebook_version,'|')[0],\n    pipeline().parameters.notebook_version)",
+										"type": "Expression"
+									},
+									"obj_id": {
+										"value": "@pipeline().parameters.obj_id",
+										"type": "Expression"
+									},
+									"obj_run_id": {
+										"value": "@pipeline().parameters.obj_run_id",
+										"type": "Expression"
+									},
+									"src_name": {
+										"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.src_name",
+										"type": "Expression"
+									},
+									"load_type": {
+										"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.load_type",
+										"type": "Expression"
+									},
+									"db_name": {
+										"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.db_name",
+										"type": "Expression"
+									},
+									"tbl_name": {
+										"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.silver_tbl_name",
+										"type": "Expression"
+									},
+									"src_path": {
+										"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.tgt_path",
+										"type": "Expression"
+									},
+									"tgt_path": {
+										"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.SILVER_TGT_PATH",
+										"type": "Expression"
+									},
+									"join_condition": {
+										"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.joinCondition",
+										"type": "Expression"
+									},
+									"composite_key_list": {
+										"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.cmpstKeyList",
+										"type": "Expression"
+									},
+									"partition_command": {
+										"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.partition_command",
+										"type": "Expression"
+									},
+									"partition_column": {
+										"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.PARTITION_COL",
+										"type": "Expression"
+									},
+									"obj_job_parameters": {
+										"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.OBJ_JOB_PARAMETERS",
+										"type": "Expression"
+									},
+									"incr_col_filt1": {
+										"value": "@activity('Get Parameters for OBJ_ID').output.firstRow.incr_col_filt1",
+										"type": "Expression"
+									},
+									"obj_name": {
+										"value": "@if(not(empty(activity('Get Parameters for OBJ_ID').output?.firstRow?.obj_name)), activity('Get Parameters for OBJ_ID').output.firstRow.obj_name,'')",
+										"type": "Expression"
+									},
+									"schema_name": {
+										"value": "@if(not(empty(activity('Get Parameters for OBJ_ID').output?.firstRow?.schema_name)), activity('Get Parameters for OBJ_ID').output.firstRow.schema_name,'')",
+										"type": "Expression"
+									},
+									"src_db_type": {
+										"value": "@if(not(empty(activity('Get Parameters for OBJ_ID').output?.firstRow?.SRC_DB_TYPE)), activity('Get Parameters for OBJ_ID').output.firstRow.SRC_DB_TYPE,'')",
+										"type": "Expression"
+									},
+									"src_name_param": {
+										"value": "@if(not(empty(activity('Get Parameters for OBJ_ID').output?.firstRow?.src_name)), activity('Get Parameters for OBJ_ID').output.firstRow.src_name,'')",
+										"type": "Expression"
+									},
+									"split_by_col": {
+										"value": "@if(not(empty(activity('Get Parameters for OBJ_ID').output?.firstRow?.split_by_col)), activity('Get Parameters for OBJ_ID').output.firstRow.split_by_col,'')",
+										"type": "Expression"
+									},
+									"conn_vault_name": {
+										"value": "@if(not(empty(activity('Get Parameters for OBJ_ID').output?.firstRow?.conn_vault_name)), activity('Get Parameters for OBJ_ID').output.firstRow.conn_vault_name,'')",
+										"type": "Expression"
+									},
+									"mappers": {
+										"value": "@if(not(empty(activity('Get Parameters for OBJ_ID').output?.firstRow?.mappers)), activity('Get Parameters for OBJ_ID').output.firstRow.mappers,'')",
+										"type": "Expression"
+									},
+									"file_path": {
+										"value": "@if(not(empty(activity('Get Parameters for OBJ_ID').output?.firstRow?.file_path)), activity('Get Parameters for OBJ_ID').output.firstRow.file_path,'')",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Obj status is already SUCCESS",
+							"type": "Wait",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 1
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"batch_run_id": {
+				"type": "string"
+			},
+			"job_run_id": {
+				"type": "string"
+			},
+			"src_id": {
+				"type": "string"
+			},
+			"src_schema_id": {
+				"type": "string"
+			},
+			"audit_schema": {
+				"type": "string"
+			},
+			"project_name": {
+				"type": "string"
+			},
+			"notebook_version": {
+				"type": "string"
+			},
+			"obj_id": {
+				"type": "string"
+			},
+			"obj_run_id": {
+				"type": "string"
+			},
+			"src_name": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"audit_schema": {
+				"type": "String"
+			},
+			"src_db_type": {
+				"type": "String"
+			},
+			"errorCatch": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "00_Ingestion_Framework/02_Bottom"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-12-09T07:59:03Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

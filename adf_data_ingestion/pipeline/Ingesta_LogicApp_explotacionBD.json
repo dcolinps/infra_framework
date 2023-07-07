@@ -1,0 +1,223 @@
+{
+	"name": "Ingesta_LogicApp_explotacionBD",
+	"properties": {
+		"activities": [
+			{
+				"name": "Switch1",
+				"type": "Switch",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@pipeline().parameters.logic2AdfTipoFlujo",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "SP",
+							"activities": [
+								{
+									"name": "Ingesta Tabla seleccionada de PBI",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "AzureSqlSource",
+											"sqlReaderStoredProcedureName": {
+												"value": "@pipeline().parameters.logic2AdfConsultaSql",
+												"type": "Expression"
+											},
+											"storedProcedureParameters": {
+												"pMail": {
+													"type": "String",
+													"value": {
+														"value": "@pipeline().parameters.logic2AdfUserMail",
+														"type": "Expression"
+													}
+												}
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"maxRowsPerFile": 1000000,
+												"fileNamePrefix": {
+													"value": "@pipeline().parameters.logic2AdfNombreConsulta",
+													"type": "Expression"
+												},
+												"quoteAllText": true,
+												"fileExtension": ".csv"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "Ds_Database_Azure_BDWISECBI_ExecSP",
+											"type": "DatasetReference"
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "Ds_explotacionbd",
+											"type": "DatasetReference",
+											"parameters": {
+												"UserMail": {
+													"value": "@pipeline().parameters.logic2AdfUserMail",
+													"type": "Expression"
+												},
+												"ConsultaSql": {
+													"value": "@pipeline().parameters.logic2AdfConsultaSql",
+													"type": "Expression"
+												},
+												"NombreConsulta": {
+													"value": "@pipeline().parameters.logic2AdfNombreConsulta",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "Web1",
+									"type": "WebActivity",
+									"dependsOn": [
+										{
+											"activity": "Ingesta Tabla seleccionada de PBI",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": "https://prod-00.southcentralus.logic.azure.com:443/workflows/7d6f040b9ca3430883a9daff213f446d/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=PW9ZZKqVCQW1Gzc358wktsxT1COEetR-quf7S8K9SKA",
+										"method": "POST",
+										"body": {
+											"value": "{\n\"NombreConsulta\":\"{@pipeline().parameters.logic2AdfNombreConsulta}\"\n}",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "DF",
+							"activities": [
+								{
+									"name": "Copy Sabana_Val",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "AzureSqlSource",
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".csv"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "Ds_Database_Azure_BDWISECBI",
+											"type": "DatasetReference",
+											"parameters": {
+												"cw_schema": "dbo",
+												"cw_table": "Test_ArchivoVentas_Val"
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "Ds_explotacionbd",
+											"type": "DatasetReference",
+											"parameters": {
+												"UserMail": "@pipeline().parameters.logic2AdfUserMail",
+												"ConsultaSql": " ",
+												"NombreConsulta": "@pipeline().RunId"
+											}
+										}
+									]
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"logic2AdfConsultaSql": {
+				"type": "string"
+			},
+			"logic2AdfNombreConsulta": {
+				"type": "string"
+			},
+			"logic2AdfUserMail": {
+				"type": "string"
+			},
+			"logic2AdfTipoFlujo": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "06_ExplotacionBD"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-04-01T06:53:25Z"
+	}
+}

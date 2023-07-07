@@ -1,0 +1,422 @@
+{
+	"name": "middle_first_level_process",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get Src Schema ID list",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "select src_schema_id from @{pipeline().globalParameters.abc_db_schema}.CONNECTIONS_METADATA where SRC_NAME = '@{pipeline().parameters.src_name}'  AND @{pipeline().parameters.src_schema_id_check} EXCEPT (SELECT SRC_SCHEMA_ID from @{pipeline().globalParameters.abc_db_schema}.JOB_RUN_STATS WHERE BATCH_RUN_ID =@{pipeline().parameters.batch_run_id} and JOB_STATUS = 'SUCCESS' AND JOB_ID in (SELECT JOB_ID FROM @{pipeline().globalParameters.abc_db_schema}.JOB_METADATA WHERE JOB_NAME = '@{pipeline().parameters.job_name}'))",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Compare Obj Count vs Success Count",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Set Obj Type for count validation",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "select count(1) as cnt from\n(\nselect count(OBJ_ID) as cnt from @{pipeline().globalParameters.abc_db_schema}.OBJ_METADATA where SRC_SCHEMA_ID in (select SRC_SCHEMA_ID from @{pipeline().globalParameters.abc_db_schema}.CONNECTIONS_METADATA where SRC_NAME = '@{pipeline().parameters.src_name}') and ACTIVE_FLG = 'Y' and coalesce(app_id,'''0''') like '%''@{pipeline().parameters.app_id}''%' and @{variables('obj_type')}\nunion\nselect count(OBJ_ID) as cnt  from @{pipeline().globalParameters.abc_db_schema}.OBJ_RUN_STATS where JOB_RUN_ID in (select JOB_RUN_ID from @{pipeline().globalParameters.abc_db_schema}.JOB_RUN_STATS where SRC_NAME = '@{pipeline().parameters.src_name}' and BATCH_RUN_ID = @{pipeline().parameters.batch_run_id})  and OBJ_STATUS = 'SUCCESS') a",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "If Count Matches Update Batch Run Stats",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Compare Obj Count vs Success Count",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('Compare Obj Count vs Success Count').output.value[0].cnt,1)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Obj Count and Success count not matched",
+							"type": "Wait",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 1
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Update Batch Run Stats",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 2,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderStoredProcedureName": {
+										"value": "@{pipeline().globalParameters.abc_db_schema}.[UPDATE_BATCH_RUN_STATS]",
+										"type": "Expression"
+									},
+									"storedProcedureParameters": {
+										"BATCH_RUN_ID": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.batch_run_id",
+												"type": "Expression"
+											}
+										},
+										"SRC_NAME": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.src_name",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "Ds_GetsetMetadata",
+									"type": "DatasetReference"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Iterate Src Schema Ids",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get Src Schema ID list",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Src Schema ID list').output.value",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 10,
+					"activities": [
+						{
+							"name": "middle second level process",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Get Src ID",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "middle_second_level_process",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"job_name": {
+										"value": "@pipeline().parameters.job_name",
+										"type": "Expression"
+									},
+									"src_schema_id": {
+										"value": "@item().src_schema_id",
+										"type": "Expression"
+									},
+									"batch_id": {
+										"value": "@pipeline().parameters.batch_id",
+										"type": "Expression"
+									},
+									"app_id": {
+										"value": "@pipeline().parameters.app_id",
+										"type": "Expression"
+									},
+									"audit_schema": {
+										"value": "@pipeline().globalParameters.abc_db_schema",
+										"type": "Expression"
+									},
+									"batch_run_id": {
+										"value": "@pipeline().parameters.batch_run_id",
+										"type": "Expression"
+									},
+									"src_name": {
+										"value": "@pipeline().parameters.src_name",
+										"type": "Expression"
+									},
+									"notebook_version": {
+										"value": "@pipeline().parameters.notebook_version",
+										"type": "Expression"
+									},
+									"src_id": {
+										"value": "@activity('Get Src ID').output.value[0].src_id",
+										"type": "Expression"
+									},
+									"project_name": {
+										"value": "@pipeline().parameters.project_name",
+										"type": "Expression"
+									},
+									"obj_type": {
+										"value": "@pipeline().parameters.obj_type",
+										"type": "Expression"
+									},
+									"aas_schema_id": {
+										"value": "@pipeline().parameters.aas_schema_id",
+										"type": "Expression"
+									},
+									"notebook_path": {
+										"value": "@pipeline().parameters.notebook_path",
+										"type": "Expression"
+									},
+									"silver_src_env": {
+										"value": "@pipeline().parameters.silver_src_env",
+										"type": "Expression"
+									},
+									"health_check": {
+										"value": "@pipeline().parameters.health_check",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Get Src ID",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 2,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "select distinct SRC_ID from @{pipeline().globalParameters.abc_db_schema}.CONNECTIONS_METADATA where SRC_NAME = '@{pipeline().parameters.src_name}'  ",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "Ds_GetsetMetadata",
+									"type": "DatasetReference"
+								},
+								"firstRowOnly": false
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Set Obj Type for count validation",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Iterate Src Schema Ids",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "obj_type",
+					"value": {
+						"value": "@if(equals(pipeline().parameters.batch_id,'1'),'1=1', \nif(equals(pipeline().parameters.batch_id,'6'),'1=1',\nif(equals(pipeline().parameters.batch_id,'7'),'obj_name like ''cpip[_]%''',\nif(equals(pipeline().parameters.batch_id,'3'),'obj_name like ''g[_]%''',\nif(equals(pipeline().parameters.batch_id,'4'),'obj_name like ''cur_%''',\nif(equals(pipeline().parameters.batch_id,'5'),concat('obj_name like ''',pipeline().parameters.src_name,'%'''),'')\n)\n)\n)\n)\n)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "utl_email_notification",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Iterate Src Schema Ids",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "utl_email_notification",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"audit_schema": {
+							"value": "@pipeline().globalParameters.abc_db_schema",
+							"type": "Expression"
+						},
+						"batch_run_id": {
+							"value": "@pipeline().parameters.batch_run_id",
+							"type": "Expression"
+						},
+						"src_schema_id": {
+							"value": "@pipeline().parameters.src_schema_id_list",
+							"type": "Expression"
+						},
+						"src_id": {
+							"value": "@pipeline().parameters.src_id",
+							"type": "Expression"
+						},
+						"calling_pipeline_name": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"pipeline_run_id": {
+							"value": "@pipeline().RunId",
+							"type": "Expression"
+						},
+						"project_name": {
+							"value": "@pipeline().parameters.project_name",
+							"type": "Expression"
+						},
+						"trigger_name": {
+							"value": "@pipeline().TriggerName",
+							"type": "Expression"
+						},
+						"factory_name": {
+							"value": "@pipeline().DataFactory",
+							"type": "Expression"
+						},
+						"stats_check": "9"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"src_name": {
+				"type": "string"
+			},
+			"job_name": {
+				"type": "string"
+			},
+			"batch_id": {
+				"type": "string"
+			},
+			"app_id": {
+				"type": "string"
+			},
+			"notebook_version": {
+				"type": "string"
+			},
+			"src_id": {
+				"type": "string"
+			},
+			"project_name": {
+				"type": "string"
+			},
+			"aas_schema_id": {
+				"type": "string"
+			},
+			"notebook_path": {
+				"type": "string"
+			},
+			"silver_src_env": {
+				"type": "string"
+			},
+			"src_schema_id_list": {
+				"type": "string"
+			},
+			"batch_run_id": {
+				"type": "string"
+			},
+			"obj_type": {
+				"type": "string"
+			},
+			"src_schema_id_check": {
+				"type": "string"
+			},
+			"health_check": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"batch_run_id": {
+				"type": "String"
+			},
+			"obj_type": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "00_Ingestion_Framework/03_Middle"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-12-09T08:02:44Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

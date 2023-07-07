@@ -1,0 +1,1106 @@
+{
+	"name": "middle_second_level_process",
+	"properties": {
+		"activities": [
+			{
+				"name": "Update IN PROGRESS Status to FAILED",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "UPDATE @{pipeline().parameters.audit_schema}.JOB_RUN_STATS SET JOB_STATUS='FAILED' WHERE JOB_STATUS='IN PROGRESS' AND JOB_ID=(SELECT JOB_ID FROM @{pipeline().parameters.audit_schema}.JOB_METADATA WHERE JOB_NAME='@{pipeline().parameters.job_name}') AND SRC_SCHEMA_ID=@{pipeline().parameters.src_schema_id} AND BATCH_RUN_ID=@{pipeline().parameters.batch_run_id};\nSELECT 0;",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Get count of failed job run id",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Update IN PROGRESS Status to FAILED",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "select count(DISTINCT JOB_RUN_ID) AS cnt FROM @{pipeline().parameters.audit_schema}.JOB_RUN_STATS WHERE JOB_STATUS='FAILED' AND JOB_ID=(SELECT JOB_ID FROM @{pipeline().parameters.audit_schema}.JOB_METADATA WHERE JOB_NAME='@{pipeline().parameters.job_name}') AND SRC_SCHEMA_ID=@{pipeline().parameters.src_schema_id} AND BATCH_RUN_ID=@{pipeline().parameters.batch_run_id}",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Check restartability",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Get count of failed job run id",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(string(activity('Get count of failed job run id').output.firstRow.cnt),'0')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "set operation type",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "operation_type",
+								"value": "UPDATE"
+							}
+						},
+						{
+							"name": "Restart Job Run Stats",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "set operation type",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 2,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": {
+									"value": "@{pipeline().parameters.audit_schema}.[app_load_job_run_stats]",
+									"type": "Expression"
+								},
+								"storedProcedureParameters": {
+									"BATCH_RUN_ID": {
+										"value": {
+											"value": "@pipeline().parameters.batch_run_id",
+											"type": "Expression"
+										},
+										"type": "Decimal"
+									},
+									"JOB_NAME": {
+										"value": {
+											"value": "@pipeline().parameters.job_name",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"OPERATION_TYPE": {
+										"value": {
+											"value": "@variables('OPERATION_TYPE')",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"SRC_NAME": {
+										"value": {
+											"value": "@pipeline().parameters.src_name",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"SRC_SCHEMA_ID": {
+										"value": {
+											"value": "@pipeline().parameters.src_schema_id",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Ls_AzureSqlDb",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Initiate New Job Run Stats",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "set operation type INSERT",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 2,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": {
+									"value": "@{pipeline().parameters.audit_schema}.[app_load_job_run_stats]",
+									"type": "Expression"
+								},
+								"storedProcedureParameters": {
+									"BATCH_RUN_ID": {
+										"value": {
+											"value": "@pipeline().parameters.batch_run_id",
+											"type": "Expression"
+										},
+										"type": "Decimal"
+									},
+									"JOB_NAME": {
+										"value": {
+											"value": "@pipeline().parameters.job_name",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"OPERATION_TYPE": {
+										"value": {
+											"value": "@variables('operation_type')",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"SRC_NAME": {
+										"value": {
+											"value": "@pipeline().parameters.src_name",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"SRC_SCHEMA_ID": {
+										"value": {
+											"value": "@pipeline().parameters.src_schema_id",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Ls_AzureSqlDb",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "set operation type INSERT",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "operation_type",
+								"value": "INSERT"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Lookup Job Run Id",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Check restartability",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT cast(job_run_id as varchar) as  job_run_id FROM @{pipeline().parameters.audit_schema}.JOB_RUN_STATS WHERE SRC_SCHEMA_ID = @{pipeline().parameters.src_schema_id} AND BATCH_RUN_ID = @{pipeline().parameters.batch_run_id} AND JOB_STATUS = 'IN PROGRESS' AND JOB_ID in (SELECT JOB_ID FROM @{pipeline().parameters.audit_schema}.JOB_METADATA WHERE JOB_NAME = '@{pipeline().parameters.job_name}')",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Update Job Run Stats - Success",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Iterate health_check OBJ_ID",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": {
+							"value": "@{pipeline().parameters.audit_schema}.[UPDATE_JOB_RUN_STATS]",
+							"type": "Expression"
+						},
+						"storedProcedureParameters": {
+							"JOB_RUN_ID": {
+								"type": "String",
+								"value": {
+									"value": "@activity('Lookup Job Run Id').output.value[0].job_run_id",
+									"type": "Expression"
+								}
+							},
+							"JOB_STATUS": {
+								"type": "String",
+								"value": "SUCCESS"
+							},
+							"PIPELINE_RUN_ID": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Update Job Run Stats - Failed",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Iterate health_check OBJ_ID",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": {
+							"value": "@{pipeline().parameters.audit_schema}.[UPDATE_JOB_RUN_STATS]",
+							"type": "Expression"
+						},
+						"storedProcedureParameters": {
+							"JOB_RUN_ID": {
+								"type": "String",
+								"value": {
+									"value": "@activity('Lookup Job Run Id').output.value[0].job_run_id",
+									"type": "Expression"
+								}
+							},
+							"JOB_STATUS": {
+								"type": "String",
+								"value": "FAILED"
+							},
+							"PIPELINE_RUN_ID": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Get OBJ_IDs",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Lookup Job Run Id",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT OBJ_ID from @{pipeline().parameters.audit_schema}.OBJ_METADATA \nWHERE src_schema_id = @{pipeline().parameters.src_schema_id} AND active_flg = 'Y' \nAND OBJ_JOB_PARAMETERS not like '%g_health_check_%' \nAND OBJ_JOB_PARAMETERS not like '%cur_health_check_%' \nAND coalesce(app_id,'''0''') like '%''@{pipeline().parameters.app_id}''%' and @{pipeline().parameters.obj_type} \nEXCEPT ( SELECT OBJ_ID from @{pipeline().parameters.audit_schema}.OBJ_RUN_STATS \nWHERE JOB_RUN_ID = @{activity('Lookup Job Run Id').output.value[0].job_run_id} and OBJ_STATUS = 'SUCCESS' ) ",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Iterate OBJ_ID",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get OBJ_IDs",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get OBJ_IDs').output.value",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 10,
+					"activities": [
+						{
+							"name": "bottom_switch_ing",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "bottom_switch_ing",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"batch_id": {
+										"value": "@pipeline().parameters.batch_id",
+										"type": "Expression"
+									},
+									"src_name": {
+										"value": "@pipeline().parameters.src_name",
+										"type": "Expression"
+									},
+									"obj_id": {
+										"value": "@item().obj_id",
+										"type": "Expression"
+									},
+									"audit_schema": {
+										"value": "@pipeline().parameters.audit_schema",
+										"type": "Expression"
+									},
+									"notebook_version": {
+										"value": "@pipeline().parameters.notebook_version",
+										"type": "Expression"
+									},
+									"batch_run_id": {
+										"value": "@pipeline().parameters.batch_run_id",
+										"type": "Expression"
+									},
+									"app_id": {
+										"value": "@pipeline().parameters.app_id",
+										"type": "Expression"
+									},
+									"job_run_id": {
+										"value": "@activity('Lookup Job Run Id').output.value[0].job_run_id",
+										"type": "Expression"
+									},
+									"src_schema_id": {
+										"value": "@pipeline().parameters.src_schema_id",
+										"type": "Expression"
+									},
+									"src_id": {
+										"value": "@pipeline().parameters.src_id",
+										"type": "Expression"
+									},
+									"project_name": {
+										"value": "@pipeline().parameters.project_name",
+										"type": "Expression"
+									},
+									"aas_schema_id": {
+										"value": "@pipeline().parameters.aas_schema_id",
+										"type": "Expression"
+									},
+									"notebook_path": {
+										"value": "@pipeline().parameters.notebook_path",
+										"type": "Expression"
+									},
+									"silver_src_env": {
+										"value": "@pipeline().parameters.silver_src_env",
+										"type": "Expression"
+									},
+									"job_name": {
+										"value": "@pipeline().parameters.job_name",
+										"type": "Expression"
+									},
+									"health_check": {
+										"value": "@pipeline().parameters.health_check",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Get health_check OBJ_IDs",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Iterate OBJ_ID",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT OBJ_ID from @{pipeline().parameters.audit_schema}.OBJ_METADATA \nWHERE src_schema_id = @{pipeline().parameters.src_schema_id} AND active_flg = 'Y' \nAND (OBJ_JOB_PARAMETERS like '%g_health_check_%' OR OBJ_JOB_PARAMETERS  like '%cur_health_check_%' )\nAND coalesce(app_id,'''0''') like '%''@{pipeline().parameters.app_id}''%' and @{pipeline().parameters.obj_type} \nEXCEPT ( SELECT OBJ_ID from @{pipeline().parameters.audit_schema}.OBJ_RUN_STATS \nWHERE JOB_RUN_ID = @{activity('Lookup Job Run Id').output.value[0].job_run_id} and OBJ_STATUS = 'SUCCESS' ) \n",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Iterate health_check OBJ_ID",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get health_check OBJ_IDs",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get health_check OBJ_IDs').output.value",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 15,
+					"activities": [
+						{
+							"name": "bottom_switch_ing health_check",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "bottom_switch_ing",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"batch_id": {
+										"value": "@pipeline().parameters.batch_id",
+										"type": "Expression"
+									},
+									"src_name": {
+										"value": "@pipeline().parameters.src_name",
+										"type": "Expression"
+									},
+									"obj_id": {
+										"value": "@item().obj_id",
+										"type": "Expression"
+									},
+									"audit_schema": {
+										"value": "@pipeline().parameters.audit_schema",
+										"type": "Expression"
+									},
+									"notebook_version": {
+										"value": "@pipeline().parameters.notebook_version",
+										"type": "Expression"
+									},
+									"batch_run_id": {
+										"value": "@pipeline().parameters.batch_run_id",
+										"type": "Expression"
+									},
+									"app_id": {
+										"value": "@pipeline().parameters.app_id",
+										"type": "Expression"
+									},
+									"job_run_id": {
+										"value": "@activity('Lookup Job Run Id').output.value[0].job_run_id",
+										"type": "Expression"
+									},
+									"src_schema_id": {
+										"value": "@pipeline().parameters.src_schema_id",
+										"type": "Expression"
+									},
+									"src_id": {
+										"value": "@pipeline().parameters.src_id",
+										"type": "Expression"
+									},
+									"project_name": {
+										"value": "@pipeline().parameters.project_name",
+										"type": "Expression"
+									},
+									"aas_schema_id": {
+										"value": "@pipeline().parameters.aas_schema_id",
+										"type": "Expression"
+									},
+									"notebook_path": {
+										"value": "@pipeline().parameters.notebook_path",
+										"type": "Expression"
+									},
+									"silver_src_env": {
+										"value": "@pipeline().parameters.silver_src_env",
+										"type": "Expression"
+									},
+									"job_name": {
+										"value": "@pipeline().parameters.job_name",
+										"type": "Expression"
+									},
+									"health_check": {
+										"value": "@pipeline().parameters.health_check",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Get Failed OBJ_IDs",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Update Job Run Stats - Failed",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "select OBJ_ID from @{pipeline().parameters.audit_schema}.OBJ_METADATA where src_schema_id = @{pipeline().parameters.src_schema_id} AND active_flg = 'Y'  and coalesce(app_id,'''0''') like '%''@{pipeline().parameters.app_id}''%' and @{pipeline().parameters.obj_type} EXCEPT ( SELECT OBJ_ID from @{pipeline().parameters.audit_schema}.OBJ_RUN_STATS WHERE JOB_RUN_ID = @{activity('Lookup Job Run Id').output.value[0].job_run_id} and OBJ_STATUS = 'SUCCESS' )",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Iterate Failed OBJ_ID",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get Failed OBJ_IDs",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Failed OBJ_IDs').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Set tempObjID",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "tempObjID",
+								"value": {
+									"value": "@concat(item().OBJ_ID, concat(' - ', variables('objID')))",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "SetObjID",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Set tempObjID",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "objID",
+								"value": {
+									"value": "@variables('tempObjID')",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "If prod env Success",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Iterate Failed OBJ_ID",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(pipeline().DataFactory,'delta-adf-prod')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "utl_teams_notification_success",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "utl_teams_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"RunId": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"ProjectName": {
+										"value": "@toUpper(pipeline().parameters.project_name)",
+										"type": "Expression"
+									},
+									"BatchRunId": {
+										"value": "@pipeline().parameters.batch_run_id",
+										"type": "Expression"
+									},
+									"ErrorOrWarning": "Pipeline Failed",
+									"ErrorMessage": {
+										"value": "@string('Pipeline failed at OBJECTS level. Please check each OBJECT failed in this run.')",
+										"type": "Expression"
+									},
+									"ObjId": {
+										"value": "@substring(variables('objID'), 0, sub(length(variables('objID')), 3))",
+										"type": "Expression"
+									},
+									"CallingPipeline": {
+										"value": "@pipeline().TriggerName",
+										"type": "Expression"
+									},
+									"SourceName": {
+										"value": "@toUpper(pipeline().parameters.src_name)",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Update Job Run Stats - Failed_copy1",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Iterate OBJ_ID",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": {
+							"value": "@{pipeline().parameters.audit_schema}.[UPDATE_JOB_RUN_STATS]",
+							"type": "Expression"
+						},
+						"storedProcedureParameters": {
+							"JOB_RUN_ID": {
+								"type": "String",
+								"value": {
+									"value": "@activity('Lookup Job Run Id').output.value[0].job_run_id",
+									"type": "Expression"
+								}
+							},
+							"JOB_STATUS": {
+								"type": "String",
+								"value": "FAILED"
+							},
+							"PIPELINE_RUN_ID": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Get Failed OBJ_IDs_copy1",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Update Job Run Stats - Failed_copy1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "select OBJ_ID from @{pipeline().parameters.audit_schema}.OBJ_METADATA where src_schema_id = @{pipeline().parameters.src_schema_id} AND active_flg = 'Y'  and coalesce(app_id,'''0''') like '%''@{pipeline().parameters.app_id}''%' and @{pipeline().parameters.obj_type} EXCEPT ( SELECT OBJ_ID from @{pipeline().parameters.audit_schema}.OBJ_RUN_STATS WHERE JOB_RUN_ID = @{activity('Lookup Job Run Id').output.value[0].job_run_id} and OBJ_STATUS = 'SUCCESS' )",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Iterate Failed OBJ_ID_copy1",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get Failed OBJ_IDs_copy1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Failed OBJ_IDs_copy1').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Set tempObjID_copy1",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "tempObjID",
+								"value": {
+									"value": "@concat(item().OBJ_ID, concat(' - ', variables('objID')))",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "SetObjID_copy1",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Set tempObjID_copy1",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "objID",
+								"value": {
+									"value": "@variables('tempObjID')",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "If prod env Failed",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Iterate Failed OBJ_ID_copy1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(pipeline().DataFactory,'delta-adf-prod')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "utl_teams_notification_Failed",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "utl_teams_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"RunId": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"ProjectName": {
+										"value": "@toUpper(pipeline().parameters.project_name)",
+										"type": "Expression"
+									},
+									"BatchRunId": {
+										"value": "@pipeline().parameters.batch_run_id",
+										"type": "Expression"
+									},
+									"ErrorOrWarning": "Pipeline Failed",
+									"ErrorMessage": {
+										"value": "@string('Pipeline failed at OBJECTS level. Please check each OBJECT failed in this run.')",
+										"type": "Expression"
+									},
+									"ObjId": {
+										"value": "@substring(variables('objID'), 0, sub(length(variables('objID')), 3))",
+										"type": "Expression"
+									},
+									"CallingPipeline": {
+										"value": "@pipeline().TriggerName",
+										"type": "Expression"
+									},
+									"SourceName": {
+										"value": "@toUpper(pipeline().parameters.src_name)",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"job_name": {
+				"type": "string"
+			},
+			"src_schema_id": {
+				"type": "string"
+			},
+			"batch_id": {
+				"type": "string"
+			},
+			"app_id": {
+				"type": "string"
+			},
+			"audit_schema": {
+				"type": "string"
+			},
+			"batch_run_id": {
+				"type": "string"
+			},
+			"src_name": {
+				"type": "string"
+			},
+			"notebook_version": {
+				"type": "string"
+			},
+			"src_id": {
+				"type": "string"
+			},
+			"project_name": {
+				"type": "string"
+			},
+			"obj_type": {
+				"type": "string"
+			},
+			"aas_schema_id": {
+				"type": "string"
+			},
+			"notebook_path": {
+				"type": "string"
+			},
+			"silver_src_env": {
+				"type": "string"
+			},
+			"health_check": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"operation_type": {
+				"type": "String"
+			},
+			"cnt": {
+				"type": "String"
+			},
+			"parameters": {
+				"type": "Array"
+			},
+			"objID": {
+				"type": "String"
+			},
+			"tempObjID": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "00_Ingestion_Framework/03_Middle"
+		},
+		"annotations": [],
+		"lastPublishTime": "2020-10-08T10:25:01Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

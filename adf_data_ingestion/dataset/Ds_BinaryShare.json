@@ -1,0 +1,51 @@
+{
+	"name": "Ds_BinaryShare",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Ls_ShareDrive",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"secret_name": {
+					"value": "@dataset().conn_vault_name",
+					"type": "Expression"
+				},
+				"username": {
+					"value": "@dataset().username",
+					"type": "Expression"
+				},
+				"sharedrive_path": {
+					"value": "@dataset().sharedrive_path",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"sharedrive_path": {
+				"type": "string"
+			},
+			"conn_vault_name": {
+				"type": "string"
+			},
+			"username": {
+				"type": "string"
+			},
+			"obj_name": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Ingestion"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "FileServerLocation",
+				"fileName": {
+					"value": "@dataset().obj_name",
+					"type": "Expression"
+				}
+			}
+		}
+	}
+}

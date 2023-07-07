@@ -1,0 +1,633 @@
+{
+	"name": "MetadataDrivenCopyTask_fva_BottomLevel",
+	"properties": {
+		"description": "This pipeline will copy objects from one group. The objects belonging to this group will be copied parallelly.",
+		"activities": [
+			{
+				"name": "ListObjectsFromOneGroup",
+				"description": "List objects from one group and iterate each of them to downstream activities",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.ObjectsPerGroupToCopy",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "RouteJobsBasedOnLoadingBehavior",
+							"description": "Check the loading behavior for each object if it requires full load or incremental load. If it is Default or FullLoad case, do full load. If it is DeltaLoad case, do incremental load via watermark column to identify changes.",
+							"type": "Switch",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"on": {
+									"value": "@json(item().DataLoadingBehaviorSettings).dataLoadingBehavior",
+									"type": "Expression"
+								},
+								"cases": [
+									{
+										"value": "FullLoadIMSS",
+										"activities": [
+											{
+												"name": "FullLoadIMS",
+												"description": "Take a full snapshot on this object and copy it to the destination",
+												"type": "Copy",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [
+													{
+														"name": "Source",
+														"value": "@{json(item().SourceObjectSettings).schema}.@{json(item().SourceObjectSettings).table}"
+													},
+													{
+														"name": "Destination",
+														"value": "@{json(item().SinkObjectSettings).schema}.@{json(item().SinkObjectSettings).table}"
+													}
+												],
+												"typeProperties": {
+													"source": {
+														"type": "AzureSqlSource",
+														"sqlReaderQuery": {
+															"value": "@json(item().CopySourceSettings).sqlReaderQuery",
+															"type": "Expression"
+														},
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None",
+														"partitionSettings": {
+															"partitionNames": "@json(item().CopySourceSettings).partitionNames"
+														}
+													},
+													"sink": {
+														"type": "AzureSqlSink",
+														"preCopyScript": {
+															"value": "@{json(item().CopySinkSettings).preCopyScript}",
+															"type": "Expression"
+														},
+														"writeBehavior": "insert",
+														"sqlWriterUseTableLock": false,
+														"tableOption": {
+															"value": "@{json(item().CopySinkSettings).tableOption}",
+															"type": "Expression"
+														},
+														"disableMetricsCollection": false
+													},
+													"enableStaging": false,
+													"validateDataConsistency": false,
+													"translator": {
+														"value": "@json(item().CopyActivitySettings).translator",
+														"type": "Expression"
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "Ds_Database_Infra_IMSS",
+														"type": "DatasetReference",
+														"parameters": {
+															"cw_schema": "@json(item().SourceObjectSettings).schema",
+															"cw_table": "@json(item().SourceObjectSettings).table"
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "Ds_Database_Azure_BDWISECBI",
+														"type": "DatasetReference",
+														"parameters": {
+															"cw_schema": "@json(item().SourceObjectSettings).schema",
+															"cw_table": "@json(item().SourceObjectSettings).table"
+														}
+													}
+												]
+											},
+											{
+												"name": "AddRowError_FullLoadOneObjectIMSS",
+												"type": "SqlServerStoredProcedure",
+												"dependsOn": [
+													{
+														"activity": "FullLoadIMS",
+														"dependencyConditions": [
+															"Failed"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"storedProcedureName": "[dbo].[usp_AddLogEntry]",
+													"storedProcedureParameters": {
+														"DataRow": {
+															"value": {
+																"value": "@{json(item().SourceObjectSettings).table}",
+																"type": "Expression"
+															},
+															"type": "String"
+														}
+													}
+												},
+												"linkedServiceName": {
+													"referenceName": "Ls_AzureSql",
+													"type": "LinkedServiceReference",
+													"parameters": {
+														"secret_name": "KV-Database-Infra-Sec"
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "DeltaLoad",
+										"activities": [
+											{
+												"name": "GetMaxWatermarkValue",
+												"description": "Query the source object to get the max value from watermark column",
+												"type": "Lookup",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "AzureSqlSource",
+														"sqlReaderQuery": {
+															"value": "select max(@{json(item().DataLoadingBehaviorSettings).watermarkColumnName}) as CurrentMaxWaterMarkColumnValue from [@{json(item().SourceObjectSettings).schema}].[@{json(item().SourceObjectSettings).table}]",
+															"type": "Expression"
+														},
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"dataset": {
+														"referenceName": "Ds_Database_Infra_Sec",
+														"type": "DatasetReference",
+														"parameters": {
+															"cw_schema": "@json(item().SourceObjectSettings).schema",
+															"cw_table": "@json(item().SourceObjectSettings).table"
+														}
+													}
+												}
+											},
+											{
+												"name": "SetWatermarkValueQuoteChar",
+												"type": "SetVariable",
+												"dependsOn": [
+													{
+														"activity": "GetMaxWatermarkValue",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"userProperties": [],
+												"typeProperties": {
+													"variableName": "WatermarkValueQuoteChar",
+													"value": {
+														"value": "@if(contains(json(item().DataLoadingBehaviorSettings).watermarkColumnType, 'Int'), '','''')",
+														"type": "Expression"
+													}
+												}
+											},
+											{
+												"name": "DeltaLoadOneObject",
+												"description": "Copy the changed data only from last time via comparing the value in watermark column to identify changes.",
+												"type": "Copy",
+												"dependsOn": [
+													{
+														"activity": "SetWatermarkValueQuoteChar",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [
+													{
+														"name": "Source",
+														"value": "@{json(item().SourceObjectSettings).schema}.@{json(item().SourceObjectSettings).table}"
+													},
+													{
+														"name": "Destination",
+														"value": "@{json(item().SinkObjectSettings).schema}.@{json(item().SinkObjectSettings).table}"
+													}
+												],
+												"typeProperties": {
+													"source": {
+														"type": "AzureSqlSource",
+														"sqlReaderQuery": {
+															"value": "select * from [@{json(item().SourceObjectSettings).schema}].[@{json(item().SourceObjectSettings).table}]\n                    where @{json(item().DataLoadingBehaviorSettings).watermarkColumnName}\n                    > @{variables('WatermarkValueQuoteChar')}@{json(item().DataLoadingBehaviorSettings).watermarkColumnStartValue}@{variables('WatermarkValueQuoteChar')}\n                    and @{json(item().DataLoadingBehaviorSettings).watermarkColumnName}\n                    <= @{variables('WatermarkValueQuoteChar')}@{activity('GetMaxWatermarkValue').output.firstRow.CurrentMaxWaterMarkColumnValue}@{variables('WatermarkValueQuoteChar')}",
+															"type": "Expression"
+														},
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None",
+														"partitionSettings": {
+															"partitionNames": "@json(item().CopySourceSettings).partitionNames"
+														}
+													},
+													"sink": {
+														"type": "AzureSqlSink",
+														"writeBehavior": "insert",
+														"sqlWriterUseTableLock": false
+													},
+													"enableStaging": false,
+													"validateDataConsistency": false,
+													"translator": {
+														"value": "@json(item().CopyActivitySettings).translator",
+														"type": "Expression"
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "Ds_Database_Infra_Sec",
+														"type": "DatasetReference",
+														"parameters": {
+															"cw_schema": "@json(item().SourceObjectSettings).schema",
+															"cw_table": "@json(item().SourceObjectSettings).table"
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "Ds_Database_Azure_BDWISECBI",
+														"type": "DatasetReference",
+														"parameters": {
+															"cw_schema": "@json(item().SourceObjectSettings).schema",
+															"cw_table": "@json(item().SourceObjectSettings).table"
+														}
+													}
+												]
+											},
+											{
+												"name": "UpdateWatermarkColumnValue",
+												"type": "SqlServerStoredProcedure",
+												"dependsOn": [
+													{
+														"activity": "DeltaLoadOneObject",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"storedProcedureName": "[dbo].[UpdateWatermarkColumnValue_fva]",
+													"storedProcedureParameters": {
+														"Id": {
+															"value": {
+																"value": "@item().Id",
+																"type": "Expression"
+															},
+															"type": "Int32"
+														},
+														"watermarkColumnStartValue": {
+															"value": {
+																"value": "@activity('GetMaxWatermarkValue').output.firstRow.CurrentMaxWaterMarkColumnValue",
+																"type": "Expression"
+															},
+															"type": "String"
+														}
+													}
+												},
+												"linkedServiceName": {
+													"referenceName": "Ls_SqlServerDb",
+													"type": "LinkedServiceReference",
+													"parameters": {
+														"secret_name": "KV-Database-Infra-Sec"
+													}
+												}
+											},
+											{
+												"name": "AddRowError_DeltaLoadOneObject",
+												"type": "SqlServerStoredProcedure",
+												"dependsOn": [
+													{
+														"activity": "DeltaLoadOneObject",
+														"dependencyConditions": [
+															"Failed"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"storedProcedureName": "[dbo].[usp_AddLogEntry]",
+													"storedProcedureParameters": {
+														"DataRow": {
+															"value": {
+																"value": "@{json(item().SourceObjectSettings).table}",
+																"type": "Expression"
+															},
+															"type": "String"
+														}
+													}
+												},
+												"linkedServiceName": {
+													"referenceName": "Ls_AzureSql",
+													"type": "LinkedServiceReference",
+													"parameters": {
+														"secret_name": "KV-Database-Azure-BDWISECBI"
+													}
+												}
+											}
+										]
+									},
+									{
+										"value": "FullLoad",
+										"activities": [
+											{
+												"name": "FullLoadOneObject",
+												"description": "Take a full snapshot on this object and copy it to the destination",
+												"type": "Copy",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [
+													{
+														"name": "Source",
+														"value": "@{json(item().SourceObjectSettings).schema}.@{json(item().SourceObjectSettings).table}"
+													},
+													{
+														"name": "Destination",
+														"value": "@{json(item().SinkObjectSettings).schema}.@{json(item().SinkObjectSettings).table}"
+													}
+												],
+												"typeProperties": {
+													"source": {
+														"type": "SqlServerSource",
+														"sqlReaderQuery": {
+															"value": "@json(item().CopySourceSettings).sqlReaderQuery",
+															"type": "Expression"
+														},
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None",
+														"partitionSettings": {
+															"partitionNames": "@json(item().CopySourceSettings).partitionNames"
+														}
+													},
+													"sink": {
+														"type": "AzureSqlSink",
+														"preCopyScript": {
+															"value": "@{json(item().CopySinkSettings).preCopyScript}",
+															"type": "Expression"
+														},
+														"writeBehavior": "insert",
+														"sqlWriterUseTableLock": false,
+														"tableOption": {
+															"value": "@{json(item().CopySinkSettings).tableOption}",
+															"type": "Expression"
+														},
+														"disableMetricsCollection": false
+													},
+													"enableStaging": false,
+													"validateDataConsistency": false,
+													"translator": {
+														"value": "@json(item().CopyActivitySettings).translator",
+														"type": "Expression"
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "Ds_Database_Infra_Sec_OP",
+														"type": "DatasetReference",
+														"parameters": {
+															"cw_schema": "@json(item().SourceObjectSettings).schema",
+															"cw_Table": "@json(item().SourceObjectSettings).table"
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "Ds_Database_Azure_BDWISECBI",
+														"type": "DatasetReference",
+														"parameters": {
+															"cw_schema": "@json(item().SourceObjectSettings).schema",
+															"cw_table": "@json(item().SourceObjectSettings).table"
+														}
+													}
+												]
+											},
+											{
+												"name": "AddRowError_FullLoad",
+												"type": "SqlServerStoredProcedure",
+												"dependsOn": [
+													{
+														"activity": "FullLoadOneObject",
+														"dependencyConditions": [
+															"Failed"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"storedProcedureName": "[dbo].[usp_AddLogEntry]",
+													"storedProcedureParameters": {
+														"DataRow": {
+															"value": {
+																"value": "@{json(item().SourceObjectSettings).table}",
+																"type": "Expression"
+															},
+															"type": "String"
+														}
+													}
+												},
+												"linkedServiceName": {
+													"referenceName": "Ls_AzureSql",
+													"type": "LinkedServiceReference",
+													"parameters": {
+														"secret_name": "KV-Database-Azure-BDWISECBI"
+													}
+												}
+											}
+										]
+									}
+								],
+								"defaultActivities": [
+									{
+										"name": "DefaultFullLoadOneObject",
+										"description": "Take a full snapshot on this object and copy it to the destination",
+										"type": "Copy",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [
+											{
+												"name": "Source",
+												"value": "@{json(item().SourceObjectSettings).schema}.@{json(item().SourceObjectSettings).table}"
+											},
+											{
+												"name": "Destination",
+												"value": "@{json(item().SinkObjectSettings).schema}.@{json(item().SinkObjectSettings).table}"
+											}
+										],
+										"typeProperties": {
+											"source": {
+												"type": "AzureSqlSource",
+												"queryTimeout": "02:00:00",
+												"partitionOption": "None",
+												"partitionSettings": {
+													"partitionNames": "@json(item().CopySourceSettings).partitionNames"
+												}
+											},
+											"sink": {
+												"type": "AzureSqlSink",
+												"preCopyScript": {
+													"value": "@json(item().CopySinkSettings).preCopyScript",
+													"type": "Expression"
+												},
+												"tableOption": {
+													"value": "@json(item().CopySinkSettings).tableOption",
+													"type": "Expression"
+												}
+											},
+											"enableStaging": false,
+											"validateDataConsistency": false,
+											"translator": {
+												"value": "@json(item().CopyActivitySettings).translator",
+												"type": "Expression"
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "Ds_Database_Azure_BDWISECBI",
+												"type": "DatasetReference",
+												"parameters": {
+													"cw_schema": {
+														"value": "@json(item().SourceObjectSettings).table",
+														"type": "Expression"
+													},
+													"cw_table": {
+														"value": "@json(item().SourceObjectSettings).schema",
+														"type": "Expression"
+													}
+												}
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "Ds_Database_Azure_BDWISECBI",
+												"type": "DatasetReference",
+												"parameters": {
+													"cw_schema": {
+														"value": "@json(item().SourceObjectSettings).table",
+														"type": "Expression"
+													},
+													"cw_table": "@json(item().SourceObjectSettings).schema"
+												}
+											}
+										]
+									},
+									{
+										"name": "AddRowError_DefaultFullLoad",
+										"type": "SqlServerStoredProcedure",
+										"dependsOn": [
+											{
+												"activity": "DefaultFullLoadOneObject",
+												"dependencyConditions": [
+													"Failed"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"storedProcedureName": "[dbo].[usp_AddLogEntry]",
+											"storedProcedureParameters": {
+												"DataRow": {
+													"value": {
+														"value": "@{json(item().SourceObjectSettings).table}",
+														"type": "Expression"
+													},
+													"type": "String"
+												}
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "Ls_AzureSql",
+											"type": "LinkedServiceReference",
+											"parameters": {
+												"secret_name": "KV-Database-Azure-BDWISECBI"
+											}
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"ObjectsPerGroupToCopy": {
+				"type": "Array"
+			}
+		},
+		"variables": {
+			"WatermarkValueQuoteChar": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "07_Framework"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-03-29T02:33:23Z"
+	}
+}

@@ -1,0 +1,126 @@
+{
+	"name": "PISQL2PASQL_ClientesDistinguidos",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy_Permisos02",
+				"description": "TRUNCATE TABLE TCAZACU02",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"preCopyScript": "TRUNCATE TABLE DBO.TCAZACU02",
+						"writeBehavior": "insert",
+						"sqlWriterUseTableLock": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "Ds_Database_Infra_Sec_OP",
+						"type": "DatasetReference",
+						"parameters": {
+							"cw_schema": "dbo",
+							"cw_Table": "TCWIACU02"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference",
+						"parameters": {
+							"cw_schema": "do",
+							"cw_table": "TCAZACU02"
+						}
+					}
+				]
+			},
+			{
+				"name": "Copy_Permisos01",
+				"description": "DROP TABLE TCAZACU01",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "AzureSqlSink",
+						"preCopyScript": "TRUNCATE TABLE ..TCAZACU01",
+						"writeBehavior": "insert",
+						"sqlWriterUseTableLock": true,
+						"disableMetricsCollection": false
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "Ds_Database_Infra_Sec_OP",
+						"type": "DatasetReference",
+						"parameters": {
+							"cw_schema": "dbo",
+							"cw_Table": "TCWIACU01"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference",
+						"parameters": {
+							"cw_schema": "dbo",
+							"cw_table": "TCWIACU01"
+						}
+					}
+				]
+			}
+		],
+		"folder": {
+			"name": "02_ClienesDistinguidos"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-04-01T04:49:17Z"
+	}
+}

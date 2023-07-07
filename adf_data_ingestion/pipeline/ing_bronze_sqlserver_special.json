@@ -1,0 +1,779 @@
+{
+	"name": "ing_bronze_sqlserver_special",
+	"properties": {
+		"activities": [
+			{
+				"name": "SCHEMA NAME AND OBJ NAME CREATION",
+				"description": "Define Correct Schema Name and OBJ Name",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "SCHEMA_OBJ_NAME",
+					"value": {
+						"value": "@split(trim(substring(pipeline().parameters.select_stmt, add(indexof(pipeline().parameters.select_stmt,'FROM'),5), sub(indexof(pipeline().parameters.select_stmt,'WHERE'), add(indexof(pipeline().parameters.select_stmt,'FROM'),5)))),'.')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "OBJ METADATA",
+				"description": "Getting OBJ METADATA FROM SOURCE",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "SCHEMA NAME AND OBJ NAME CREATION",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "Ds_SqlServerSpecial",
+						"type": "DatasetReference",
+						"parameters": {
+							"secret_name": {
+								"value": "@pipeline().parameters.conn_vault_name",
+								"type": "Expression"
+							},
+							"obj_name": {
+								"value": "@if(contains(variables('SCHEMA_OBJ_NAME')[1],' '),replace(replace(variables('SCHEMA_OBJ_NAME')[1],'[',''),']',''), if(contains(variables('SCHEMA_OBJ_NAME')[1],'['),replace(replace(replace(variables('SCHEMA_OBJ_NAME')[1],'[',''),']',''),'''',''),variables('SCHEMA_OBJ_NAME')[1]))",
+								"type": "Expression"
+							},
+							"schema_name": {
+								"value": "@replace(replace(variables('SCHEMA_OBJ_NAME')[0],'[',''),']','')",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"structure"
+					]
+				}
+			},
+			{
+				"name": "SchemaCollection",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "OBJ METADATA",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('OBJ METADATA').output.structure",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Dynamic Schema",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "Default Schema",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "dynamic_schema",
+								"value": {
+									"value": "@replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(item().physicalName,'\\',''),'/',''),'#',''),'$',''),'%',''),' ','_'),'-',''),'&',''),'*',''),'~',''),'`',''),'[',''),']',''),'{',''),'}',''),'|',''),'\"',''),':',''),';',''),'\"',''),'''',''),'<',''),'>',''),',',''),'.',''),'^',''),'(','')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Default Schema",
+							"type": "AppendVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "default_schema",
+								"value": {
+									"value": "@item().physicalName",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "RENAME DYNAMIC SCHEMA",
+				"description": "REPLACE CURLY BRACKET IN DYNAMIC SCHEMA ARRAY",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "SchemaCollection",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@variables('dynamic_schema')",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Rename Schema",
+							"type": "AppendVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "renamed_schema",
+								"value": {
+									"value": "@replace(item(),')','')",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "ConcatSchema",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "RENAME DYNAMIC SCHEMA",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@variables('renamed_schema')",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "CONCAT SCHEMA",
+							"type": "AppendVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "concat_schema",
+								"value": {
+									"value": "@concat('\"', variables('default_schema')[int(variables('current_iterate'))], '\":\"', item(), '\"')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "CURRENT ITERATE INCREMENT",
+							"description": "Current Iterate + 1 and Append to Iterate Array",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "CONCAT SCHEMA",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "iterate_array",
+								"value": {
+									"value": "@string(add(int(variables('current_iterate')),1))",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Reset Current Iterate",
+							"description": "Getting latest Iterate from Iterate Array",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "CURRENT ITERATE INCREMENT",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "current_iterate",
+								"value": {
+									"value": "@string(last(variables('iterate_array')))",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "CREATE JSON COLUMN MAPPING",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "ConcatSchema",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "json_column_mapping",
+					"value": {
+						"value": "@concat('{\"type\": \"TabularTranslator\",\"columnMappings\":{',join(variables('concat_schema'), ','), '}')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Query Validation",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "CREATE JSON COLUMN MAPPING",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@startswith(toUpper(pipeline().parameters.select_stmt), toUpper('SELECT * FROM'))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Copy data - sqlserver 2",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "Delete Parquet files if already exists 2",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlServerSource",
+									"sqlReaderQuery": {
+										"value": "@pipeline().parameters.select_stmt",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"isolationLevel": "ReadCommitted",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings",
+										"maxConcurrentConnections": 10,
+										"blockSizeInMB": 20
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"parallelCopies": 32,
+								"enableSkipIncompatibleRow": false,
+								"dataIntegrationUnits": 32
+							},
+							"inputs": [
+								{
+									"referenceName": "Ds_SqlServerTable",
+									"type": "DatasetReference",
+									"parameters": {
+										"secret_name": {
+											"value": "@pipeline().parameters.conn_vault_name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "Ds_BronzeParquet",
+									"type": "DatasetReference",
+									"parameters": {
+										"bronze_path": {
+											"value": "@pipeline().parameters.file_path",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "Delete Parquet files if already exists 2",
+							"type": "Delete",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "Ds_BronzeParquet",
+									"type": "DatasetReference",
+									"parameters": {
+										"bronze_path": {
+											"value": "@pipeline().parameters.file_path",
+											"type": "Expression"
+										}
+									}
+								},
+								"enableLogging": false,
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"wildcardFileName": "*"
+								}
+							}
+						},
+						{
+							"name": "Update Bronze Status in OBJ_RUN_STATS2",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Copy data - sqlserver 2",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 2,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": {
+									"value": "@{pipeline().globalParameters.abc_db_schema}.[SET_OBJ_RUN_STATS]",
+									"type": "Expression"
+								},
+								"storedProcedureParameters": {
+									"JOB_RUN_ID": {
+										"value": {
+											"value": "@pipeline().parameters.job_run_id",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"OBJ_ID": {
+										"value": {
+											"value": "@pipeline().parameters.obj_id",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"OBJ_RUN_ID": {
+										"value": {
+											"value": "@pipeline().parameters.obj_run_id",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"OBJ_STATUS": {
+										"value": "BRONZE_SUCCESS",
+										"type": "String"
+									},
+									"OPERATION_TYPE": {
+										"value": "UPDATE",
+										"type": "String"
+									},
+									"PIPELINE_RUN_ID": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"SOURCE_COUNT": {
+										"value": {
+											"value": "@activity('Copy data - sqlserver 2').output.rowsRead",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"SRC_NAME": {
+										"value": {
+											"value": "@pipeline().parameters.src_name",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"SRC_PATH": {
+										"value": null,
+										"type": "String"
+									},
+									"SRC_SCHEMA_ID": {
+										"value": {
+											"value": "@pipeline().parameters.src_schema_id",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"TARGET_COUNT": {
+										"value": {
+											"value": "@activity('Copy data - sqlserver 2').output.rowsCopied",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"TGT_PATH": {
+										"value": {
+											"value": "@pipeline().parameters.file_path",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Ls_AzureSqlDb",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Delete Parquet files if already exists 1",
+							"type": "Delete",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "Ds_BronzeParquet",
+									"type": "DatasetReference",
+									"parameters": {
+										"bronze_path": {
+											"value": "@pipeline().parameters.file_path",
+											"type": "Expression"
+										}
+									}
+								},
+								"enableLogging": false,
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"wildcardFileName": "*"
+								}
+							}
+						},
+						{
+							"name": "Copy data - sqlserver 1",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "Delete Parquet files if already exists 1",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlServerSource",
+									"sqlReaderQuery": {
+										"value": "@pipeline().parameters.select_stmt",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"isolationLevel": "ReadCommitted",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings",
+										"maxConcurrentConnections": 10,
+										"blockSizeInMB": 20
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"parallelCopies": 32,
+								"enableSkipIncompatibleRow": false,
+								"dataIntegrationUnits": 32,
+								"translator": {
+									"value": "@json(variables('json_column_mapping'))",
+									"type": "Expression"
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "Ds_SqlServerTable",
+									"type": "DatasetReference",
+									"parameters": {
+										"secret_name": {
+											"value": "@pipeline().parameters.conn_vault_name",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "Ds_BronzeParquet",
+									"type": "DatasetReference",
+									"parameters": {
+										"bronze_path": {
+											"value": "@pipeline().parameters.file_path",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "Update Bronze Status in OBJ_RUN_STATS",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Copy data - sqlserver 1",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 2,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": {
+									"value": "@{pipeline().globalParameters.abc_db_schema}.[SET_OBJ_RUN_STATS]",
+									"type": "Expression"
+								},
+								"storedProcedureParameters": {
+									"JOB_RUN_ID": {
+										"value": {
+											"value": "@pipeline().parameters.job_run_id",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"OBJ_ID": {
+										"value": {
+											"value": "@pipeline().parameters.obj_id",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"OBJ_RUN_ID": {
+										"value": {
+											"value": "@pipeline().parameters.obj_run_id",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"OBJ_STATUS": {
+										"value": "BRONZE_SUCCESS",
+										"type": "String"
+									},
+									"OPERATION_TYPE": {
+										"value": "UPDATE",
+										"type": "String"
+									},
+									"PIPELINE_RUN_ID": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"SOURCE_COUNT": {
+										"value": {
+											"value": "@activity('Copy data - sqlserver 1').output.rowsRead",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"SRC_NAME": {
+										"value": {
+											"value": "@pipeline().parameters.src_name",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"SRC_PATH": {
+										"value": null,
+										"type": "String"
+									},
+									"SRC_SCHEMA_ID": {
+										"value": {
+											"value": "@pipeline().parameters.src_schema_id",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"TARGET_COUNT": {
+										"value": {
+											"value": "@activity('Copy data - sqlserver 1').output.rowsCopied",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									},
+									"TGT_PATH": {
+										"value": {
+											"value": "@pipeline().parameters.file_path",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Ls_AzureSqlDb",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"schema_name": {
+				"type": "string"
+			},
+			"obj_name": {
+				"type": "string"
+			},
+			"select_stmt": {
+				"type": "string"
+			},
+			"split_by_col": {
+				"type": "string"
+			},
+			"conn_vault_name": {
+				"type": "string"
+			},
+			"file_path": {
+				"type": "string"
+			},
+			"load_type": {
+				"type": "string"
+			},
+			"mappers": {
+				"type": "string"
+			},
+			"obj_id": {
+				"type": "string"
+			},
+			"obj_run_id": {
+				"type": "string"
+			},
+			"job_run_id": {
+				"type": "string"
+			},
+			"src_name": {
+				"type": "string"
+			},
+			"src_schema_id": {
+				"type": "string"
+			},
+			"batch_run_id": {
+				"type": "string"
+			},
+			"audit_schema": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"ErrorCatch": {
+				"type": "Boolean"
+			},
+			"SCHEMA_OBJ_NAME": {
+				"type": "Array"
+			},
+			"dynamic_schema": {
+				"type": "Array"
+			},
+			"default_schema": {
+				"type": "Array"
+			},
+			"renamed_schema": {
+				"type": "Array"
+			},
+			"concat_schema": {
+				"type": "Array"
+			},
+			"current_iterate": {
+				"type": "String",
+				"defaultValue": "0"
+			},
+			"iterate_array": {
+				"type": "Array"
+			},
+			"json_column_mapping": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "00_Ingestion_Framework/01_ingestion"
+		},
+		"annotations": []
+	}
+}

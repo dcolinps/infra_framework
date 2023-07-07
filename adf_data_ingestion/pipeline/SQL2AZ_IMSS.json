@@ -1,0 +1,35 @@
+{
+	"name": "SQL2AZ_IMSS",
+	"properties": {
+		"activities": [
+			{
+				"name": "SP_NoRepetidos",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[PROCAZRECETAS_NR]"
+				},
+				"linkedServiceName": {
+					"referenceName": "Ls_AzureSql",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"secret_name": "KV-Database-Azure-BDWISECBI"
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "08_IMSS"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-02-10T17:40:44Z"
+	}
+}

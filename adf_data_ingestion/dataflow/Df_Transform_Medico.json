@@ -1,0 +1,112 @@
+{
+	"name": "Df_Transform_Medico",
+	"properties": {
+		"folder": {
+			"name": "Dataflow_RentabilidadMedica"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "sourceDotacionesCY"
+				},
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "beakm01Agrupa"
+				},
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "RecetasOxidom"
+				},
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "Renta"
+				},
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "TCWIOXTPA02"
+				},
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "TCWIINSGPOC01"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "sinkDotacionesCY"
+				},
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "Sinkbeakm01AgrupaFiltradoCONC"
+				},
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "SinkNuevasRecetas"
+				},
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "SinkRentaConNuevasColumnas"
+				}
+			],
+			"transformations": [
+				{
+					"name": "EliminarColumnasDuplicadas"
+				},
+				{
+					"name": "DotacionesAgregarColumnas"
+				},
+				{
+					"name": "FiltroCONC"
+				},
+				{
+					"name": "RentaAgregarColumnas"
+				},
+				{
+					"name": "JoinRecOxiDot"
+				},
+				{
+					"name": "EliminarColumnasDuplicadas2"
+				},
+				{
+					"name": "JoinDotTCWIOXTPA02"
+				},
+				{
+					"name": "EliminaEspacios"
+				}
+			],
+			"script": "source(output(\n\t\tAnio as short,\n\t\tMes as short,\n\t\tSuc as short,\n\t\tCliente as integer,\n\t\tCodigo as integer,\n\t\tDotCont as integer,\n\t\tDotProv as integer,\n\t\tDotProp as integer,\n\t\tDeposito as decimal(18,2),\n\t\tFechaAlta as timestamp,\n\t\tCargas as integer,\n\t\tTipoCte as string,\n\t\tTipoParticular as string,\n\t\tAumentosDia as integer,\n\t\tDisminucionesDia as integer,\n\t\tAumentosMes as integer,\n\t\tDisminucionesMes as integer,\n\t\tFechaTrans as timestamp,\n\t\tUltimaDotacion as boolean\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table',\n\tpartitionBy('hash', 1)) ~> sourceDotacionesCY\nsource(output(\n\t\tGrupo as string,\n\t\tCodigo as integer,\n\t\tSubGrupo as string,\n\t\tUsuario as string,\n\t\tFechaAudit as timestamp\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table',\n\tpartitionBy('hash', 1)) ~> beakm01Agrupa\nsource(output(\n\t\tAnio as short,\n\t\tMes as short,\n\t\tsuc as short,\n\t\tCliente as integer,\n\t\tNombre as string,\n\t\tTieneEquipo as string,\n\t\tInstitucion as string,\n\t\tAnioReceta as integer,\n\t\tEne as integer,\n\t\tFeb as integer,\n\t\tMar as integer,\n\t\tAbr as integer,\n\t\tMay as integer,\n\t\tJun as integer,\n\t\tJul as integer,\n\t\tAgo as integer,\n\t\tSep as integer,\n\t\tOct as integer,\n\t\tNov as integer,\n\t\tDic as integer,\n\t\tFechaTrans as timestamp,\n\t\tUltimaReceta as boolean\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table',\n\tpartitionBy('hash', 1)) ~> RecetasOxidom\nsource(output(\n\t\tAnio as short,\n\t\tMes as short,\n\t\tSuc as short,\n\t\tCliente as integer,\n\t\tCodigo as integer,\n\t\tNombreCte as string,\n\t\tDiasRenta as integer,\n\t\tFechaultPago as timestamp,\n\t\tCteFBaja as timestamp,\n\t\tImporte as decimal(18,3),\n\t\tCantidadEq as short,\n\t\tFormaPago as string,\n\t\tTieneEquipo as string,\n\t\tCodigoEnvase as integer,\n\t\tAltaCte as timestamp,\n\t\tModalidad as string,\n\t\tDeposito as decimal(18,2),\n\t\tFechaTrans as timestamp,\n\t\tUltimaRenta as boolean\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table',\n\tpartitionBy('hash', 1)) ~> Renta\nsource(output(\n\t\tTipoCte as string,\n\t\tTipoParticular as string,\n\t\tDescripcion as string,\n\t\tCategoriaCte as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> TCWIOXTPA02\nsource(output(\n\t\tSubGrupo as string,\n\t\tDescripcion as string,\n\t\tOrden as short,\n\t\tListadoEquipoUbicacion as boolean,\n\t\tUsuario as string,\n\t\tFechaAudit as timestamp,\n\t\tFechaRegistro as timestamp\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> TCWIINSGPOC01\nJoinDotTCWIOXTPA02 select(mapColumn(\n\t\tAnio,\n\t\tMes,\n\t\tSuc,\n\t\tCliente,\n\t\tCodigo,\n\t\tDotCont,\n\t\tTipoCte = EliminaEspacios@TipoCte,\n\t\tTipoParticular = EliminaEspacios@TipoParticular,\n\t\tDotProv,\n\t\tFechaAlta,\n\t\tFechaTrans,\n\t\tUltimaDotacion,\n\t\tCategoriaCte,\n\t\tDescripcion\n\t),\n\tpartitionBy('hash', 1),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> EliminarColumnasDuplicadas\nEliminarColumnasDuplicadas derive(TipoCliente = case(Cliente==99998,\"PATIOS\",\"CLIENTES\"),\n\t\tCategoriaEquipo = case(Codigo==4460||Codigo==4795||Codigo==400075||Codigo==450059||Codigo==4000027,'CONCENTRADOR','OTRO'),\n\t\tsubtipocte = case(Cliente==99998,\"PATIOS\",case(isNull(CategoriaCte),\"OTRO\",CategoriaCte)),\n\tpartitionBy('hash', 1)) ~> DotacionesAgregarColumnas\nbeakm01Agrupa filter(SubGrupo == 'CONC',\n\tpartitionBy('hash', 1)) ~> FiltroCONC\nRenta derive(TipoCte = case(initCap(FormaPago)=='Efectivo'||initCap(FormaPago)==\"Tarjeta\",'PARTICULAR',case(initCap(FormaPago)=='Firma'||upper(FormaPago)==\"OTRO\",'ASEGURADORA',\"\")),\n\t\tCategoriaEquipo = case(CodigoEnvase==4460||CodigoEnvase==4795||CodigoEnvase==400075||CodigoEnvase==450059||CodigoEnvase==4000027,'CONCENTRADOR','OTRO'),\n\t\tPendienteCobro = case(initCap(Modalidad)=='Vencida' && DiasRenta>35 && (initCap(FormaPago) == 'Efectivo' || initCap(FormaPago) =='Tarjeta') && upper(TieneEquipo) == \"SI\",\"SI\",\r\ncase(initCap(Modalidad)=='Anticipada' && DiasRenta>5 && (initCap(FormaPago) == 'Efectivo' || initCap(FormaPago) =='Tarjeta') && upper(TieneEquipo) == \"SI\",\"SI\",\r\ncase(initCap(Modalidad)=='Vencida' && DiasRenta>32 && (initCap(FormaPago) == 'Firma' || FormaPago =='OTRO') && upper(TieneEquipo) == \"SI\",\"SI\",\r\ncase(initCap(Modalidad)=='Anticipada' && DiasRenta>32 && (initCap(FormaPago) == 'Firma' || FormaPago =='OTRO') && upper(TieneEquipo) == \"SI\",\"SI\",\r\n\"NO\"))))) ~> RentaAgregarColumnas\nRecetasOxidom, DotacionesAgregarColumnas join(RecetasOxidom@suc == EliminarColumnasDuplicadas@Suc\n\t&& RecetasOxidom@Cliente == EliminarColumnasDuplicadas@Cliente\n\t&& RecetasOxidom@Anio == EliminarColumnasDuplicadas@Anio\n\t&& RecetasOxidom@Mes == EliminarColumnasDuplicadas@Mes,\n\tjoinType:'inner',\n\tbroadcast: 'auto')~> JoinRecOxiDot\nJoinRecOxiDot select(mapColumn(\n\t\tAnio = EliminarColumnasDuplicadas@Anio,\n\t\tMes = EliminarColumnasDuplicadas@Mes,\n\t\tsuc,\n\t\tCliente = EliminarColumnasDuplicadas@Cliente,\n\t\tNombre,\n\t\tTieneEquipo,\n\t\tInstitucion,\n\t\tAnioReceta,\n\t\tEne,\n\t\tFeb,\n\t\tMar,\n\t\tAbr,\n\t\tMay,\n\t\tJun,\n\t\tJul,\n\t\tAgo,\n\t\tSep,\n\t\tOct,\n\t\tNov,\n\t\tDic,\n\t\tFechaTrans = EliminarColumnasDuplicadas@FechaTrans,\n\t\tCodigo,\n\t\tDotCont,\n\t\tTipoCte = TipoCliente,\n\t\tCategoriaEquipo\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> EliminarColumnasDuplicadas2\nEliminaEspacios, TCWIOXTPA02 join(EliminaEspacios@TipoCte == TCWIOXTPA02@TipoCte\n\t&& EliminaEspacios@TipoParticular == TCWIOXTPA02@TipoParticular,\n\tjoinType:'left',\n\tpartitionBy('hash', 1),\n\tbroadcast: 'right')~> JoinDotTCWIOXTPA02\nsourceDotacionesCY derive(TipoParticular = replace(TipoParticular, \" \"),\n\t\tTipoCte = replace(TipoCte, \" \")) ~> EliminaEspacios\nDotacionesAgregarColumnas sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\trecreate:true,\n\tformat: 'table',\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\terrorHandlingOption: 'stopOnFirstError') ~> sinkDotacionesCY\nFiltroCONC sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\trecreate:true,\n\tformat: 'table',\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\terrorHandlingOption: 'stopOnFirstError') ~> Sinkbeakm01AgrupaFiltradoCONC\nEliminarColumnasDuplicadas2 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\trecreate:true,\n\tformat: 'table',\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\terrorHandlingOption: 'stopOnFirstError') ~> SinkNuevasRecetas\nRentaAgregarColumnas sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\trecreate:true,\n\tformat: 'table',\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tsaveOrder: 1,\n\terrorHandlingOption: 'stopOnFirstError') ~> SinkRentaConNuevasColumnas"
+		}
+	}
+}

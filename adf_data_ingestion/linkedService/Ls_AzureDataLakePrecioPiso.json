@@ -1,0 +1,10 @@
+{
+	"name": "Ls_AzureDataLakePrecioPiso",
+	"properties": {
+		"annotations": [],
+		"type": "AzureBlobFS",
+		"typeProperties": {
+			"url": "https://infrastoragegen2.dfs.core.windows.net/"
+		}
+	}
+}

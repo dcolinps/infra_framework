@@ -1,0 +1,328 @@
+{
+	"name": "utl_obj_dependency",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get Batch_run_id for Obj_Lvl_dep",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "batch_start_dttm",
+					"value": {
+						"value": "@substring(pipeline().parameters.batch_run_id,0,14)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Until Obj Lvl dep is satisfied",
+				"type": "Until",
+				"dependsOn": [
+					{
+						"activity": "Get Batch_run_id for Obj_Lvl_dep",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@or(equals(variables('Obj_Lvl_dep_Check_Status'),'success'),greater(int(variables('temp_iteration')),int(variables('iteration_max'))))",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Check obj_lvl dependency_inner",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 2,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "SELECT COUNT(1) AS CHECK1\n from (\n\t SELECT DISTINCT obrs.obj_id,jrs.batch_run_id,obrs.obj_status,RANK() OVER (PARTITION BY obrs.obj_id ORDER BY jrs.batch_run_id DESC) rnk  \n\t FROM @{pipeline().parameters.audit_schema}.OBJ_RUN_STATS obrs \n\t INNER JOIN @{pipeline().parameters.audit_schema}.JOB_RUN_STATS jrs ON jrs.JOB_RUN_ID=Obrs.JOB_RUN_ID \n\t INNER JOIN @{pipeline().parameters.audit_schema}.BATCH_RUN_STATS brs ON jrs.BATCH_RUN_ID=brs.BATCH_RUN_ID\n\t where obrs.OBJ_ID IN (@{pipeline().parameters.dep_obj_id_list})  and jrs.BATCH_RUN_ID like '@{variables('batch_start_dttm')}%' AND brs.BATCH_ID>0 \n ) MAIN  WHERE rnk=1 and obj_status='SUCCESS'",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "Ds_GetsetMetadata",
+									"type": "DatasetReference"
+								}
+							}
+						},
+						{
+							"name": "set var based on cond",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "Check obj_lvl dependency_inner",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(int(activity('Check obj_lvl dependency_inner').output.firstRow.CHECK1),int(pipeline().parameters.dep_obj_count))",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "Obj_lvl_dep cnt do not match",
+										"type": "Wait",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"waitTimeInSeconds": {
+												"value": "@variables('wait_time_sec')",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "Set Obj_check Status",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "Set temp_status check",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "Obj_Lvl_dep_Check_Status",
+											"value": {
+												"value": "@variables('temp_status_check')",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "Set temp_status check",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "Obj_lvl_dep cnt do not match",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "temp_status_check",
+											"value": "failed"
+										}
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "Obj_lvl_dep Check complete_copy1_copy1",
+										"type": "Wait",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"waitTimeInSeconds": 1
+										}
+									},
+									{
+										"name": "updated obj_lvl_dep_check_status",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "updated temp_status check",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "Obj_Lvl_dep_Check_Status",
+											"value": {
+												"value": "@variables('temp_status_check')",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "updated temp_status check",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "Obj_lvl_dep Check complete_copy1_copy1",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "temp_status_check",
+											"value": "success"
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "Update iteration count",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Check obj_lvl dependency_inner",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "loop_iteration",
+								"value": {
+									"value": "@string(add(int(variables('temp_iteration')),1))",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Update iteration level",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Update iteration count",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "temp_iteration",
+								"value": {
+									"value": "@variables('loop_iteration')",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "If Condition1",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "set var based on cond",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@greater(int(variables('temp_iteration')),int(variables('iteration_max')))",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "Obj_lvl_dep check is in progress",
+										"type": "Wait",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"waitTimeInSeconds": 1
+										}
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "Max iteration limit reached",
+										"description": "Throwing error when parameters is null",
+										"type": "SetVariable",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "ErrorCatch",
+											"value": {
+												"value": "@div(1,0)",
+												"type": "Expression"
+											}
+										}
+									}
+								]
+							}
+						}
+					],
+					"timeout": "7.00:00:00"
+				}
+			}
+		],
+		"parameters": {
+			"batch_run_id": {
+				"type": "string"
+			},
+			"dep_obj_id_list": {
+				"type": "string"
+			},
+			"app_id": {
+				"type": "string"
+			},
+			"dep_obj_count": {
+				"type": "int"
+			},
+			"audit_schema": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"batch_start_dttm": {
+				"type": "String",
+				"defaultValue": "NA"
+			},
+			"Obj_Lvl_dep_Check_Status": {
+				"type": "String",
+				"defaultValue": "failed"
+			},
+			"temp_status_check": {
+				"type": "String"
+			},
+			"iteration_max": {
+				"type": "String",
+				"defaultValue": "100"
+			},
+			"wait_time_sec": {
+				"type": "String",
+				"defaultValue": "60"
+			},
+			"temp_iteration": {
+				"type": "String",
+				"defaultValue": "1"
+			},
+			"loop_iteration": {
+				"type": "String"
+			},
+			"ErrorCatch": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "00_Ingestion_Framework/00_Utilities"
+		},
+		"annotations": [],
+		"lastPublishTime": "2020-10-08T10:22:15Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

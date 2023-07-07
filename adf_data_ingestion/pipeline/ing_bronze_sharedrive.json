@@ -1,0 +1,1069 @@
+{
+	"name": "ing_bronze_sharedrive",
+	"properties": {
+		"description": "sharedrive ingestion",
+		"activities": [
+			{
+				"name": "Delete Parquet files if already exists",
+				"type": "Delete",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "Ds_BronzeParquet",
+						"type": "DatasetReference",
+						"parameters": {
+							"bronze_path": {
+								"value": "@pipeline().parameters.file_path",
+								"type": "Expression"
+							}
+						}
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"wildcardFileName": "*"
+					}
+				}
+			},
+			{
+				"name": "Get obj name for sharedrive file check",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "Delete Parquet files if already exists",
+						"dependencyConditions": [
+							"Completed"
+						]
+					},
+					{
+						"activity": "Delete staging path if already exists",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "Ds_BinaryShare",
+						"type": "DatasetReference",
+						"parameters": {
+							"sharedrive_path": {
+								"value": "@pipeline().parameters.sharedrive_path",
+								"type": "Expression"
+							},
+							"conn_vault_name": {
+								"value": "@pipeline().parameters.conn_vault_name",
+								"type": "Expression"
+							},
+							"username": {
+								"value": "@pipeline().parameters.username",
+								"type": "Expression"
+							},
+							"obj_name": {
+								"value": "@string('')",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "FileServerReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "BinaryReadSettings"
+					}
+				}
+			},
+			{
+				"name": "Sharedrive file check",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "Get obj name for sharedrive file check",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get obj name for sharedrive file check').output.childItems",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@contains(item().name,pipeline().parameters.obj_name)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "If sharedrive files are present",
+				"description": "If file present then do nothing else make this activity failed and continue to 2nd if checking. \n\nDetails of the design as below:\n\nWhy when it failed then only go to next instead of success?\nAnswer: It is due to the logic of how ADF consider a pipeline status is failed or success. \nIn short, whenever 1 activity or component is having 2 connection and it is failed, no matter what is the status for the following activity, overall pipeline will be failed as well. \nWhen we only have activity with 1 connection, if it is success but following activity is failed, overall pipeline will be failed.\nHowever, When we only have activity with 1 connection, even it is failed but as long as the following activity is success, overall pipeline will be success. \n\nReference: Azure Data Factory - Activity and pipeline outcome\n\nhttps://datasavvy.me/2021/02/18/azure-data-factory-activity-failures-and-pipeline-outcomes/\n\n",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Sharedrive file check",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@not(equals(activity('Sharedrive file check').output.FilteredItemsCount,0))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "File not present in sharedrive cont 2nd checking",
+							"description": "Failed if files are not present in sharedrive",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "ErrorCatch",
+								"value": {
+									"value": "@{div(1,0)}",
+									"type": "Expression"
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "File present in sharedrive and do ntg",
+							"description": "Giving success if files are present in sharedrive",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "ErrorCatch",
+								"value": {
+									"value": "@{div(1,1)}",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Copy from sharedrive to deltalake",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "If sharedrive files are not present",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "BinarySource",
+						"storeSettings": {
+							"type": "FileServerReadSettings",
+							"recursive": false,
+							"wildcardFileName": {
+								"value": "@concat(pipeline().parameters.obj_name,'*')",
+								"type": "Expression"
+							},
+							"deleteFilesAfterCompletion": false
+						},
+						"formatSettings": {
+							"type": "BinaryReadSettings"
+						}
+					},
+					"sink": {
+						"type": "BinarySink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "Ds_BinaryShare",
+						"type": "DatasetReference",
+						"parameters": {
+							"sharedrive_path": {
+								"value": "@pipeline().parameters.sharedrive_path",
+								"type": "Expression"
+							},
+							"conn_vault_name": {
+								"value": "@pipeline().parameters.conn_vault_name",
+								"type": "Expression"
+							},
+							"username": {
+								"value": "@pipeline().parameters.username",
+								"type": "Expression"
+							},
+							"obj_name": {
+								"value": "@pipeline().parameters.obj_name",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "Ds_BinaryDelta",
+						"type": "DatasetReference",
+						"parameters": {
+							"obj_name": {
+								"value": "@pipeline().parameters.obj_name",
+								"type": "Expression"
+							},
+							"staging_path": {
+								"value": "@pipeline().parameters.staging_path",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "Archive from current to history",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "CallDataflowBasedonSource",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "BinarySource",
+						"storeSettings": {
+							"type": "FileServerReadSettings",
+							"recursive": true,
+							"wildcardFileName": {
+								"value": "@concat(pipeline().parameters.obj_name,'*')",
+								"type": "Expression"
+							},
+							"deleteFilesAfterCompletion": false
+						},
+						"formatSettings": {
+							"type": "BinaryReadSettings"
+						}
+					},
+					"sink": {
+						"type": "BinarySink",
+						"storeSettings": {
+							"type": "FileServerWriteSettings"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "Ds_BinaryArchive",
+						"type": "DatasetReference",
+						"parameters": {
+							"sharedrive_path": {
+								"value": "@pipeline().parameters.sharedrive_path",
+								"type": "Expression"
+							},
+							"conn_vault_name": {
+								"value": "@pipeline().parameters.conn_vault_name",
+								"type": "Expression"
+							},
+							"username": {
+								"value": "@pipeline().parameters.username",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "Ds_BinaryArchive",
+						"type": "DatasetReference",
+						"parameters": {
+							"sharedrive_path": {
+								"value": "@pipeline().parameters.archive_path",
+								"type": "Expression"
+							},
+							"conn_vault_name": {
+								"value": "@pipeline().parameters.conn_vault_name",
+								"type": "Expression"
+							},
+							"username": {
+								"value": "@pipeline().parameters.username",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "Get obj name for bronze file check",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "Archive from current to history",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "Ds_BronzeParquet",
+						"type": "DatasetReference",
+						"parameters": {
+							"bronze_path": {
+								"value": "@pipeline().parameters.file_path",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					}
+				}
+			},
+			{
+				"name": "Bronze file check",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "Get obj name for bronze file check",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get obj name for bronze file check').output.childItems",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@contains(item().name,variables('successfile'))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Delete from sharedrive current",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "If bronze files are not present",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "Ds_BinaryShare",
+						"type": "DatasetReference",
+						"parameters": {
+							"sharedrive_path": {
+								"value": "@pipeline().parameters.sharedrive_path",
+								"type": "Expression"
+							},
+							"conn_vault_name": {
+								"value": "@pipeline().parameters.conn_vault_name",
+								"type": "Expression"
+							},
+							"username": {
+								"value": "@pipeline().parameters.username",
+								"type": "Expression"
+							},
+							"obj_name": {
+								"value": "@pipeline().parameters.obj_name",
+								"type": "Expression"
+							}
+						}
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "FileServerReadSettings",
+						"recursive": false,
+						"wildcardFileName": {
+							"value": "@{concat(pipeline().parameters.obj_name,'*')}",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "If bronze files are not present",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Bronze file check",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('Bronze file check').output.FilteredItemsCount,0)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Success 3",
+							"description": "Giving success if files are present in bronze",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "ErrorCatch",
+								"value": {
+									"value": "@{div(1,1)}",
+									"type": "Expression"
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Error Throw 3",
+							"description": "Throwing error when files are not present in bronze",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "ErrorCatch",
+								"value": {
+									"value": "@div(1,0)",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Delete from staging path",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "If bronze files are not present",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "Ds_BinaryDelta",
+						"type": "DatasetReference",
+						"parameters": {
+							"obj_name": {
+								"value": "@pipeline().parameters.obj_name",
+								"type": "Expression"
+							},
+							"staging_path": {
+								"value": "@pipeline().parameters.staging_path",
+								"type": "Expression"
+							}
+						}
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": false,
+						"wildcardFileName": "*"
+					}
+				}
+			},
+			{
+				"name": "Delete staging path if already exists",
+				"type": "Delete",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "Ds_BinaryDelta",
+						"type": "DatasetReference",
+						"parameters": {
+							"obj_name": {
+								"value": "@pipeline().parameters.obj_name",
+								"type": "Expression"
+							},
+							"staging_path": {
+								"value": "@pipeline().parameters.staging_path",
+								"type": "Expression"
+							}
+						}
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"wildcardFileName": "*"
+					}
+				}
+			},
+			{
+				"name": "Update Bronze Status in OBJ_RUN_STATS",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Delete from sharedrive current",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Delete from staging path",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": {
+						"value": "@{pipeline().globalParameters.abc_db_schema}.[SET_OBJ_RUN_STATS]",
+						"type": "Expression"
+					},
+					"storedProcedureParameters": {
+						"JOB_RUN_ID": {
+							"value": {
+								"value": "@pipeline().parameters.job_run_id",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"OBJ_ID": {
+							"value": {
+								"value": "@pipeline().parameters.obj_id",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"OBJ_RUN_ID": {
+							"value": {
+								"value": "@pipeline().parameters.obj_run_id",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"OBJ_STATUS": {
+							"value": "BRONZE_SUCCESS",
+							"type": "String"
+						},
+						"OPERATION_TYPE": {
+							"value": "UPDATE",
+							"type": "String"
+						},
+						"PIPELINE_RUN_ID": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"SOURCE_COUNT": {
+							"value": null,
+							"type": "Int64"
+						},
+						"SRC_NAME": {
+							"value": null,
+							"type": "String"
+						},
+						"SRC_PATH": {
+							"value": null,
+							"type": "String"
+						},
+						"SRC_SCHEMA_ID": {
+							"value": {
+								"value": "@pipeline().parameters.src_schema_id",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"TARGET_COUNT": {
+							"value": null,
+							"type": "Int64"
+						},
+						"TGT_PATH": {
+							"value": {
+								"value": "@pipeline().parameters.file_path",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Ls_AzureSqlDb",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "CallDataflowBasedonSource",
+				"type": "Switch",
+				"dependsOn": [
+					{
+						"activity": "Copy from sharedrive to deltalake",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@pipeline().parameters.src_name",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "xlsx",
+							"activities": [
+								{
+									"name": "Wait2",
+									"type": "Wait",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"waitTimeInSeconds": 1
+									}
+								}
+							]
+						}
+					],
+					"defaultActivities": [
+						{
+							"name": "Data flow Csv File",
+							"type": "ExecuteDataFlow",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "1.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataflow": {
+									"referenceName": "Df_CleaningCsv",
+									"type": "DataFlowReference",
+									"parameters": {
+										"staging_path": {
+											"value": "'@{concat('\"',pipeline().parameters.staging_path,'\"')}'",
+											"type": "Expression"
+										},
+										"file_path": {
+											"value": "'@{concat('\"',pipeline().parameters.file_path,'\"')}'",
+											"type": "Expression"
+										},
+										"obj_name": {
+											"value": "'@{concat('\"',pipeline().parameters.obj_name,'\"')}'",
+											"type": "Expression"
+										}
+									},
+									"datasetParameters": {
+										"cleaningColumnNamesAndEOLChar": {
+											"staging_path": {
+												"value": "@pipeline().parameters.staging_path",
+												"type": "Expression"
+											},
+											"column_delimiter": {
+												"value": "@pipeline().parameters.column_delimiter",
+												"type": "Expression"
+											},
+											"obj_name": {
+												"value": "@pipeline().parameters.obj_name",
+												"type": "Expression"
+											},
+											"escape_char": {
+												"value": "@pipeline().parameters.escape_char",
+												"type": "Expression"
+											},
+											"quote_char": {
+												"value": "@pipeline().parameters.quote_char",
+												"type": "Expression"
+											},
+											"encoding": {
+												"value": "@pipeline().parameters.encoding",
+												"type": "Expression"
+											}
+										},
+										"stagingToBronze": {
+											"bronze_path": {
+												"value": "@pipeline().parameters.file_path",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								"compute": {
+									"coreCount": 8,
+									"computeType": "General"
+								},
+								"traceLevel": "Fine"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "If sharedrive files are not present",
+				"description": "If file not present then do nothing else failed the pipeline to continue to the ingestion\n\nDetails of the design as below:\n\nWhy when it failed then only go to next instead of success?\nAnswer: It is due to the logic of how ADF consider a pipeline status is failed or success. \nIn short, whenever 1 activity or component is having 2 connection and it is failed, no matter what is the status for the following activity, overall pipeline will be failed as well. \nWhen we only have activity with 1 connection, if it is success but following activity is failed, overall pipeline will be failed.\nHowever, When we only have activity with 1 connection, even it is failed but as long as the following activity is success, overall pipeline will be success. \n\nReference: Azure Data Factory - Activity and pipeline outcome\n\nhttps://datasavvy.me/2021/02/18/azure-data-factory-activity-failures-and-pipeline-outcomes/",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Sharedrive file check",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(activity('Sharedrive file check').output.FilteredItemsCount,0)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "File present in sharedrive and start ingestion",
+							"description": "",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "ErrorCatch",
+								"value": {
+									"value": "@{div(1,0)}",
+									"type": "Expression"
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "File not present in sharedrive and do ntg",
+							"description": "",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "ErrorCatch",
+								"value": {
+									"value": "@{div(1,1)}",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "If Src_Name can be found",
+				"description": "if src name = gbv_hfm_file then update obj run stat as success else failed the pipeline",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "If sharedrive files are present",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@contains(pipeline().globalParameters.sharedrive_src,pipeline().parameters.src_name)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Failed - Src name is not gbv and file not exist_copy1",
+							"description": "",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "ErrorCatch",
+								"value": {
+									"value": "@{div(1,0)}",
+									"type": "Expression"
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Update Bronze Status in OBJ_RUN_STATS_1",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 2,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": {
+									"value": "@{pipeline().globalParameters.abc_db_schema}.[SET_OBJ_RUN_STATS]",
+									"type": "Expression"
+								},
+								"storedProcedureParameters": {
+									"JOB_RUN_ID": {
+										"value": {
+											"value": "@pipeline().parameters.job_run_id",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"OBJ_ID": {
+										"value": {
+											"value": "@pipeline().parameters.obj_id",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"OBJ_RUN_ID": {
+										"value": {
+											"value": "@pipeline().parameters.obj_run_id",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"OBJ_STATUS": {
+										"value": "SUCCESS",
+										"type": "String"
+									},
+									"OPERATION_TYPE": {
+										"value": "UPDATE",
+										"type": "String"
+									},
+									"PIPELINE_RUN_ID": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"SOURCE_COUNT": {
+										"value": null,
+										"type": "Int64"
+									},
+									"SRC_NAME": {
+										"value": {
+											"value": "@pipeline().parameters.src_name",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"SRC_PATH": {
+										"value": {
+											"value": "@pipeline().parameters.file_path",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"SRC_SCHEMA_ID": {
+										"value": {
+											"value": "@pipeline().parameters.src_schema_id",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"TARGET_COUNT": {
+										"value": null,
+										"type": "Int64"
+									},
+									"TGT_PATH": {
+										"value": {
+											"value": "@pipeline().parameters.file_path",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Ls_AzureSqlDb",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"sharedrive_path": {
+				"type": "string"
+			},
+			"obj_name": {
+				"type": "string"
+			},
+			"column_delimiter": {
+				"type": "string"
+			},
+			"archive_path": {
+				"type": "string"
+			},
+			"src_name": {
+				"type": "string"
+			},
+			"file_path": {
+				"type": "string"
+			},
+			"conn_vault_name": {
+				"type": "string"
+			},
+			"schema_name": {
+				"type": "string"
+			},
+			"obj_count": {
+				"type": "int"
+			},
+			"escape_char": {
+				"type": "string"
+			},
+			"quote_char": {
+				"type": "string"
+			},
+			"username": {
+				"type": "string"
+			},
+			"staging_path": {
+				"type": "string"
+			},
+			"obj_id": {
+				"type": "string",
+				"defaultValue": "5"
+			},
+			"obj_run_id": {
+				"type": "string",
+				"defaultValue": "3"
+			},
+			"job_run_id": {
+				"type": "string",
+				"defaultValue": "2"
+			},
+			"src_schema_id": {
+				"type": "string",
+				"defaultValue": "10004"
+			},
+			"batch_run_id": {
+				"type": "string",
+				"defaultValue": "1"
+			},
+			"audit_schema": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"encoding": {
+				"type": "string",
+				"defaultValue": "UTF-8"
+			}
+		},
+		"variables": {
+			"ErrorCatch": {
+				"type": "String"
+			},
+			"successfile": {
+				"type": "String",
+				"defaultValue": "_SUCCESS"
+			}
+		},
+		"folder": {
+			"name": "00_Ingestion_Framework/01_ingestion"
+		},
+		"annotations": []
+	}
+}

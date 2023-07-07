@@ -1,0 +1,101 @@
+{
+	"name": "Df_Sabana_Correos",
+	"properties": {
+		"folder": {
+			"name": "Correos"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "MaestroCte"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "Correos"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Select3"
+				},
+				{
+					"name": "Filter1"
+				},
+				{
+					"name": "DerivedColumn2"
+				},
+				{
+					"name": "DerivedColumn3"
+				},
+				{
+					"name": "DerivedColumn4"
+				},
+				{
+					"name": "DerivedColumn5"
+				},
+				{
+					"name": "DerivedColumn6"
+				},
+				{
+					"name": "DerivedColumn7"
+				},
+				{
+					"name": "DerivedColumn8"
+				},
+				{
+					"name": "DerivedColumn9"
+				},
+				{
+					"name": "DerivedColumn10"
+				},
+				{
+					"name": "DerivedColumn11"
+				},
+				{
+					"name": "Filter2"
+				},
+				{
+					"name": "Select8"
+				},
+				{
+					"name": "ConditionalSplit1"
+				},
+				{
+					"name": "Filter3"
+				},
+				{
+					"name": "Select9"
+				},
+				{
+					"name": "Join1"
+				},
+				{
+					"name": "Filter4"
+				},
+				{
+					"name": "Union1"
+				},
+				{
+					"name": "Select10"
+				},
+				{
+					"name": "Union2"
+				},
+				{
+					"name": "EliminarSaltos"
+				}
+			],
+			"script": "source(output(\n\t\tSuc as short,\n\t\tCliente as integer,\n\t\tRazonSocial as string,\n\t\tPaterno as string,\n\t\tMaterno as string,\n\t\tNombre as string,\n\t\tCalle as string,\n\t\tNumext as string,\n\t\tNumInt as string,\n\t\tColonia as string,\n\t\tDelegacion as string,\n\t\tCiudad as string,\n\t\tEstado as string,\n\t\tCalle1 as string,\n\t\tCalle2 as string,\n\t\tCodpos as string,\n\t\tTelefono as string,\n\t\tRfc as string,\n\t\tPais as short,\n\t\tTipoCte as string,\n\t\tGiro as string,\n\t\tEjeGas as short,\n\t\tEjeMer as short,\n\t\tExentoRenta as string,\n\t\tExentoGM as string,\n\t\tSee as string,\n\t\tCteEspecial as string,\n\t\tMaquilador as float,\n\t\tFechaAlta as timestamp,\n\t\tAltaEnvases as timestamp,\n\t\tCapto as string,\n\t\tEMail as string,\n\t\tUsuario as string,\n\t\tFechaAudit as timestamp,\n\t\tFacturaMetros as string,\n\t\tEfectivo as string,\n\t\tDistribuidor as string,\n\t\tIvaCte as double,\n\t\tCteViejo as string,\n\t\tCopias as string,\n\t\tCargasAct as integer,\n\t\tCargasAnt as integer,\n\t\tNombreCte as string,\n\t\tCteDewar as string,\n\t\tCPlanta as short,\n\t\tEjeGE as short,\n\t\tEjeGETrans as string,\n\t\tCertifCal as string,\n\t\tTipoPub as string,\n\t\tGrupo as string,\n\t\tExtra1 as string,\n\t\tExtra2 as string,\n\t\tExtra3 as integer,\n\t\tCteSansion as integer,\n\t\tFechaCargaSec as timestamp,\n\t\tTipoParticular as string,\n\t\tExtra4 as string,\n\t\tExtra5 as string,\n\t\tEmailEnvioFE as string\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> MaestroCte\nMaestroCte select(mapColumn(\n\t\tSuc,\n\t\tCliente,\n\t\tCiudad,\n\t\tEstado,\n\t\tCodpos,\n\t\tTelefono,\n\t\tEMail,\n\t\tDistribuidor,\n\t\tNombreCte,\n\t\tCorreoFactura = EmailEnvioFE,\n\t\tFechaAlta,\n\t\tCPlanta\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select3\nUnion1 filter(!(isNull(EMail)||EMail==\"\")||!(isNull(CorreoFactura)||CorreoFactura==\"\")) ~> Filter1\nFilter1 derive(EmailAviso = replace(EMail,\",\",\";\"),\n\t\tEmailFacturacion = replace(CorreoFactura,\",\",\";\")) ~> DerivedColumn2\nDerivedColumn2 derive(EmailAviso = replace(EmailAviso,\" \",\"\"),\n\t\tEmailFacturacion = replace(EmailFacturacion,\" \",\"\")) ~> DerivedColumn3\nEliminarSaltos derive(EmailAviso = replace(EmailAviso,\":\",\";\"),\n\t\tEmailFacturacion = replace(EmailFacturacion,\":\",\";\")) ~> DerivedColumn4\nDerivedColumn4 derive(EmailAviso = replace(EmailAviso,\"<\",\";\"),\n\t\tEmailFacturacion = replace(EmailFacturacion,\"<\",\";\")) ~> DerivedColumn5\nDerivedColumn5 derive(EmailAviso = replace(EmailAviso,\">\",\";\"),\n\t\tEmailFacturacion = replace(EmailFacturacion,\">\",\";\")) ~> DerivedColumn6\nDerivedColumn6 derive(EmailAviso = lower(EmailAviso),\n\t\tEmailFacturacion = lower(EmailFacturacion)) ~> DerivedColumn7\nDerivedColumn7 derive(EmailAviso = mapIf(split(EmailAviso,\";\"), like(#item, '_%@_%._%' ) && !like(#item, '_%@infra%._%' ), #item),\n\t\tEmailFacturacion = mapIf(split(EmailFacturacion,\";\"), like(#item, '_%@_%._%' ) && !like(#item, '_%@infra%._%' ), #item)) ~> DerivedColumn8\nDerivedColumn8 derive(EmailFinal = case(size(EmailAviso)>0,toString(reduce(EmailAviso,\"\",#acc+#item+\";\",#result)),toString(reduce(EmailFacturacion,\"\",#acc+#item+\";\",#result)))) ~> DerivedColumn9\nDerivedColumn9 derive(EmailFinal = case( instr(EmailFinal,\"[\")>0, replace(EmailFinal,\"[\",\"\"),case( instr(EmailFinal, \"]\")>0,replace(EmailFinal,\"]\",\"\"),EmailFinal))) ~> DerivedColumn10\nDerivedColumn10 derive(EmailFinal = dropRight(EmailFinal,1)) ~> DerivedColumn11\nDerivedColumn11 filter(!(isNull(EmailFinal)||EmailFinal==\"\")) ~> Filter2\nFilter2 select(mapColumn(\n\t\tSuc,\n\t\tCliente,\n\t\tCiudad,\n\t\tEstado,\n\t\tCodpos,\n\t\tTelefono,\n\t\tEMail,\n\t\tDistribuidor,\n\t\tNombreCte,\n\t\tCorreoFactura,\n\t\tFechaAlta,\n\t\tEmailFinal\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select8\nFilter3 split(CPlanta==Suc,\n\tdisjoint: false) ~> ConditionalSplit1@(DatosPlanta, Sucursales)\nSelect3 filter(CPlanta==184 || CPlanta==212 || CPlanta==425) ~> Filter3\nConditionalSplit1@Sucursales select(mapColumn(\n\t\tSuc,\n\t\tCliente,\n\t\tCPlanta\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select9\nConditionalSplit1@DatosPlanta, Select9 join(ConditionalSplit1@DatosPlanta@CPlanta == Select9@CPlanta\n\t&& ConditionalSplit1@DatosPlanta@Cliente == Select9@Cliente,\n\tjoinType:'outer',\n\tbroadcast: 'auto')~> Join1\nSelect3 filter(CPlanta!=184 && CPlanta!=212 && CPlanta!=425) ~> Filter4\nFilter4, Union2 union(byName: true)~> Union1\nJoin1 select(mapColumn(\n\t\tSuc = Select9@Suc,\n\t\tCliente = Select9@Cliente,\n\t\tCPlanta = Select9@CPlanta,\n\t\tCiudad,\n\t\tEstado,\n\t\tCodpos,\n\t\tTelefono,\n\t\tEMail,\n\t\tDistribuidor,\n\t\tNombreCte,\n\t\tCorreoFactura,\n\t\tFechaAlta\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select10\nConditionalSplit1@DatosPlanta, Select10 union(byName: true)~> Union2\nDerivedColumn3 derive(EmailAviso = replace(EmailAviso,\"\",\"\"),\n\t\tEmailFacturacion = replace(EmailAviso,\"\",\"\")) ~> EliminarSaltos\nSelect8 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\ttruncate:true,\n\tformat: 'table',\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\terrorHandlingOption: 'stopOnFirstError') ~> Correos"
+		}
+	}
+}

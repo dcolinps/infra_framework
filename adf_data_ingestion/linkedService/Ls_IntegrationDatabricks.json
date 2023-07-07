@@ -1,0 +1,26 @@
+{
+	"name": "Ls_IntegrationDatabricks",
+	"properties": {
+		"parameters": {
+			"cluster_id": {
+				"type": "string"
+			}
+		},
+		"annotations": [
+			"Framework de Ingestion"
+		],
+		"type": "AzureDatabricks",
+		"typeProperties": {
+			"domain": "https://adb-4348208209437123.3.azuredatabricks.net",
+			"accessToken": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "Ls_AzureKeyVault",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "KV-ADB-Databricks-Token"
+			},
+			"existingClusterId": "@linkedService().cluster_id"
+		}
+	}
+}

@@ -1,0 +1,205 @@
+{
+	"name": "Verificacion SAP_NoCentroCostos",
+	"properties": {
+		"activities": [
+			{
+				"name": "Prueba Verificacion SAP",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "1.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "Df_SAP_NCC_Transform_PendientesDeEntrega",
+						"type": "DataFlowReference",
+						"parameters": {
+							"FechaDeCarga": "currentUTC()"
+						},
+						"datasetParameters": {
+							"Compradores": {
+								"cw_schema": {
+									"value": "@pipeline().parameters.cw_schema_stg",
+									"type": "Expression"
+								},
+								"cw_table": {
+									"value": "@pipeline().parameters.Compradores",
+									"type": "Expression"
+								}
+							},
+							"Proveedores": {
+								"cw_schema": {
+									"value": "@pipeline().parameters.cw_schema_stg",
+									"type": "Expression"
+								},
+								"cw_table": {
+									"value": "@pipeline().parameters.Proveedores",
+									"type": "Expression"
+								}
+							},
+							"ME2L": {
+								"cw_schema": {
+									"value": "@pipeline().parameters.cw_schema_stg",
+									"type": "Expression"
+								},
+								"cw_table": {
+									"value": "@pipeline().parameters.ME2L",
+									"type": "Expression"
+								}
+							},
+							"ME5A": {
+								"cw_schema": {
+									"value": "@pipeline().parameters.cw_schema_stg",
+									"type": "Expression"
+								},
+								"cw_table": {
+									"value": "@pipeline().parameters.ME5A",
+									"type": "Expression"
+								}
+							},
+							"NotasSobrePedidos": {
+								"cw_schema": {
+									"value": "@pipeline().parameters.cw_schema_stg",
+									"type": "Expression"
+								},
+								"cw_table": {
+									"value": "@pipeline().parameters.Notas_Pedido",
+									"type": "Expression"
+								}
+							},
+							"TipoDeCambio": {
+								"cw_schema": {
+									"value": "@pipeline().parameters.cw_schema_stg",
+									"type": "Expression"
+								},
+								"cw_table": {
+									"value": "@pipeline().parameters.Tipo_De_Cambio",
+									"type": "Expression"
+								}
+							},
+							"TipoDeCompra": {
+								"cw_schema": {
+									"value": "@pipeline().parameters.cw_schema_stg",
+									"type": "Expression"
+								},
+								"cw_table": {
+									"value": "@pipeline().parameters.Tipo_De_Compra",
+									"type": "Expression"
+								}
+							},
+							"ME2LDetalle": {
+								"cw_schema": {
+									"value": "@pipeline().parameters.cw_schema_stg",
+									"type": "Expression"
+								},
+								"cw_table": {
+									"value": "@pipeline().parameters.ME2L_Detalle",
+									"type": "Expression"
+								}
+							},
+							"Area": {
+								"cw_schema": {
+									"value": "@pipeline().parameters.cw_schema",
+									"type": "Expression"
+								},
+								"cw_table": {
+									"value": "@pipeline().parameters.Area",
+									"type": "Expression"
+								}
+							},
+							"Imputacion": {
+								"cw_schema": {
+									"value": "@pipeline().parameters.cw_schema_stg",
+									"type": "Expression"
+								},
+								"cw_table": {
+									"value": "@pipeline().parameters.Imputacion",
+									"type": "Expression"
+								}
+							},
+							"TASQLSabanaFinalPendientes3": {
+								"cw_schema": {
+									"value": "@pipeline().parameters.cw_schema",
+									"type": "Expression"
+								},
+								"cw_table": {
+									"value": "@pipeline().parameters.sink",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "Fine"
+				}
+			}
+		],
+		"parameters": {
+			"cw_schema": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"Compradores": {
+				"type": "string",
+				"defaultValue": "T024"
+			},
+			"Proveedores": {
+				"type": "string",
+				"defaultValue": "LFA1"
+			},
+			"ME2L": {
+				"type": "string",
+				"defaultValue": "TMEKKO"
+			},
+			"ME5A": {
+				"type": "string",
+				"defaultValue": "EBAN"
+			},
+			"Notas_Pedido": {
+				"type": "string",
+				"defaultValue": "SAP_Notas_Pedido"
+			},
+			"Tipo_De_Cambio": {
+				"type": "string",
+				"defaultValue": "TMTCURR"
+			},
+			"Tipo_De_Compra": {
+				"type": "string",
+				"defaultValue": "ZDOM_TIPO_COMPRA"
+			},
+			"ME2L_Detalle": {
+				"type": "string",
+				"defaultValue": "TDEKPO"
+			},
+			"Area": {
+				"type": "string",
+				"defaultValue": "TCSACOAREA01"
+			},
+			"Imputacion": {
+				"type": "string",
+				"defaultValue": "MEREP"
+			},
+			"sink": {
+				"type": "string",
+				"defaultValue": "TASQL_SabanaFinalPendientes3"
+			},
+			"cw_schema_stg": {
+				"type": "string",
+				"defaultValue": "stg"
+			}
+		},
+		"folder": {
+			"name": "10_PendientesDeEntrega"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-02-25T20:43:46Z"
+	}
+}

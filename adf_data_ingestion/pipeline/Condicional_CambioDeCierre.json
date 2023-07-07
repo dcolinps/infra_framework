@@ -1,0 +1,368 @@
+{
+	"name": "Condicional_CambioDeCierre",
+	"properties": {
+		"activities": [
+			{
+				"name": "If Condition1",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "TMAZCIERRES",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "bfakm01_Cierres",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@not(\n        equals(\n            activity('TMAZCIERRES').output.firstRow.Campo1,\n            activity('bfakm01_Cierres').output.firstRow.Campo1\n            )\n    )\n    \n\n",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Copy CIERRES",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": "SELECT * FROM [dbo].[bfakm01] WHERE Clave = 'CIERREANT'",
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "AzureSqlSink",
+									"preCopyScript": "DROP TABLE IF EXISTS TMAZCIERRES",
+									"writeBehavior": "insert",
+									"tableOption": "autoCreate",
+									"disableMetricsCollection": false
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "Clave",
+												"type": "String",
+												"physicalType": "varchar"
+											},
+											"sink": {
+												"name": "Clave",
+												"type": "String",
+												"physicalType": "varchar"
+											}
+										},
+										{
+											"source": {
+												"name": "Campo1",
+												"type": "String",
+												"physicalType": "varchar"
+											},
+											"sink": {
+												"name": "Campo1",
+												"type": "String",
+												"physicalType": "varchar"
+											}
+										},
+										{
+											"source": {
+												"name": "Campo2",
+												"type": "String",
+												"physicalType": "varchar"
+											},
+											"sink": {
+												"name": "Campo2",
+												"type": "String",
+												"physicalType": "varchar"
+											}
+										},
+										{
+											"source": {
+												"name": "Campo3",
+												"type": "String",
+												"physicalType": "varchar"
+											},
+											"sink": {
+												"name": "Campo3",
+												"type": "String",
+												"physicalType": "varchar"
+											}
+										},
+										{
+											"source": {
+												"name": "Campo4",
+												"type": "String",
+												"physicalType": "varchar"
+											},
+											"sink": {
+												"name": "Campo4",
+												"type": "String",
+												"physicalType": "varchar"
+											}
+										},
+										{
+											"source": {
+												"name": "Campo5",
+												"type": "String",
+												"physicalType": "varchar"
+											},
+											"sink": {
+												"name": "Campo5",
+												"type": "String",
+												"physicalType": "varchar"
+											}
+										}
+									],
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "Ds_Database_Azure_BDWISECBI",
+									"type": "DatasetReference",
+									"parameters": {
+										"cw_schema": "dbo",
+										"cw_table": "bfakm01"
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "Ds_Database_Azure_BDWISECBI",
+									"type": "DatasetReference",
+									"parameters": {
+										"cw_schema": "dbo",
+										"cw_table": "TMAZCIERRES"
+									}
+								}
+							]
+						},
+						{
+							"name": "Send_Email_True",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "NotebookCorreo",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Copy CIERRES",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": "https://prod-07.southcentralus.logic.azure.com:443/workflows/cb6faa66c0bd48979f0aec6eae8d7ad7/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=rUsYktCWjtzQOCVXROyUvqLPeo3DT0QGpP3gJpcFV6w",
+								"method": "POST",
+								"body": {
+									"value": "{\n    \"title\": \"¡Se enviaron las notificaciones!\",\n    \"message\": \"¡Se enviaron las notificaciones de cierre de mes!\",\n    \"color\": \"Green\",\n    \"dataFactoryName\": \"Maestro de Cierres\",\n    \"pipelineName\": \"Notif Clientes Distinguidos\",\n    \"pipelineRunId\": \"activity('Copy CIERRES').output\",\n    \"time\": \"@{utcnow()}\"\n}",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "usp_bi_notificacionDistinguidos",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[usp_bi_notificacionDistinguidos]"
+							},
+							"linkedServiceName": {
+								"referenceName": "Ls_AzureSql",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"secret_name": "KV-Database-Azure-BDWISECBI"
+								}
+							}
+						},
+						{
+							"name": "NotebookCorreo",
+							"type": "DatabricksNotebook",
+							"dependsOn": [
+								{
+									"activity": "usp_bi_notificacionDistinguidos",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "Cluster",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": "/temp/Prod_ClientesDistinguidosNotificacion"
+							},
+							"linkedServiceName": {
+								"referenceName": "Ls_ConnectionDatabricks",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"cluster_version": {
+										"value": "@activity('Cluster').output.firstRow.cluster_version",
+										"type": "Expression"
+									},
+									"worker_count": "1",
+									"billing_name": {
+										"value": "@activity('Cluster').output.firstRow.billing_name",
+										"type": "Expression"
+									},
+									"pool_id": {
+										"value": "@activity('Cluster').output.firstRow.pool_id",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "Cluster",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderStoredProcedureName": "[dbo].[sp_get_databricks_billing]",
+									"storedProcedureParameters": {
+										"DATAFACTORY_NAME": {
+											"value": {
+												"value": "@pipeline().DataFactory",
+												"type": "Expression"
+											}
+										},
+										"PROJECT_NAME": {
+											"value": "cloud_sec"
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "Ds_Database_Billing",
+									"type": "DatasetReference"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "TMAZCIERRES",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference",
+						"parameters": {
+							"cw_schema": "dbo",
+							"cw_table": "TMAZCIERRES"
+						}
+					}
+				}
+			},
+			{
+				"name": "bfakm01_Cierres",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT * FROM [dbo].[bfakm01] WHERE Clave = 'CIERREANT'",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference",
+						"parameters": {
+							"cw_schema": "dbo",
+							"cw_table": "bfakm01"
+						}
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "01_CatalogosYMaestros"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-03-24T17:12:15Z"
+	}
+}

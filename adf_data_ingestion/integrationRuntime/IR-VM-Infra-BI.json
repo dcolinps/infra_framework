@@ -1,0 +1,12 @@
+{
+	"name": "IR-VM-Infra-BI",
+	"properties": {
+		"type": "SelfHosted",
+		"typeProperties": {
+			"linkedInfo": {
+				"resourceId": "/subscriptions/812eb6fd-0368-4bc3-8569-068fa63a6e7b/resourcegroups/Infra-BI/providers/Microsoft.DataFactory/factories/Infra-BI-ETL/integrationruntimes/IR-VM-Infra-BI",
+				"authorizationType": "Rbac"
+			}
+		}
+	}
+}

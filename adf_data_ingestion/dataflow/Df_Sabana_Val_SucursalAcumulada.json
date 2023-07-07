@@ -1,0 +1,106 @@
+{
+	"name": "Df_Sabana_Val_SucursalAcumulada",
+	"properties": {
+		"folder": {
+			"name": "Correos"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "CatalogoSuc"
+				},
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "VentaxLinea"
+				},
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "ArchivoCorreos"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "Join2"
+				},
+				{
+					"name": "Select5"
+				},
+				{
+					"name": "Join3"
+				},
+				{
+					"name": "Select6"
+				},
+				{
+					"name": "Select7"
+				},
+				{
+					"name": "DerivedColumn1"
+				},
+				{
+					"name": "Pivot1"
+				},
+				{
+					"name": "Join4"
+				},
+				{
+					"name": "Select9"
+				},
+				{
+					"name": "Select10"
+				},
+				{
+					"name": "UniquePivot"
+				},
+				{
+					"name": "UniquePrincipal"
+				},
+				{
+					"name": "Filter3"
+				},
+				{
+					"name": "Select11"
+				},
+				{
+					"name": "DerivedColumn12"
+				},
+				{
+					"name": "Sort1"
+				},
+				{
+					"name": "Filter4"
+				},
+				{
+					"name": "DerivedColumn14"
+				},
+				{
+					"name": "Select12"
+				}
+			],
+			"script": "parameters{\n\tmonth as integer (month(currentDate())),\n\tyear as integer (year(currentDate()))\n}\nsource(output(\n\t\tArea as short,\n\t\tSucursal as short,\n\t\tNombreSuc as string,\n\t\tTipoSucursal as string,\n\t\tMarcaExcel as string,\n\t\tPoliticaVentas as short,\n\t\tCCPlanta as integer,\n\t\tCCAgrupacion as integer,\n\t\tDiaPedido as string,\n\t\tCalle as string,\n\t\tColonia as string,\n\t\tMunicipio as string,\n\t\tEstado as string,\n\t\tCodigoPostal as string,\n\t\tTelefono as string,\n\t\tCCElectrodos as string,\n\t\tIva as double,\n\t\tProchemex as string,\n\t\tDiaSurtimiento as integer,\n\t\tSerieFactura as string,\n\t\tRuta as short,\n\t\tNacional as string,\n\t\tMatrizMetro as string,\n\t\tAgrupadas as short,\n\t\tImpuestos as boolean,\n\t\tNombrePta as string,\n\t\tProcesar as short,\n\t\tEmail as string,\n\t\tBajaSucursal as string,\n\t\tFechaAlta as timestamp,\n\t\tNumExt as string,\n\t\tNumInt as string,\n\t\tPais as short,\n\t\tCiudad as string,\n\t\tLocation_Nomina as string,\n\t\tMarcacion as string,\n\t\tFechaBaja as timestamp,\n\t\tTipoTransmision as string,\n\t\tccSAP as string,\n\t\tCategoria as string,\n\t\tccSapAcetileno as string,\n\t\tccSapOxidom as string,\n\t\tFEnuevos as string,\n\t\tCCReciboNomina as string,\n\t\tZonaEconomica as short,\n\t\tDiaPedidoRefacciones as short,\n\t\tLatitud as decimal(18,6),\n\t\tLongitud as decimal(18,6),\n\t\tFechaRegistro as timestamp\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> CatalogoSuc\nsource(output(\n\t\tAnio as short,\n\t\tSuc as short,\n\t\tCliente as integer,\n\t\tLinea as short,\n\t\tLineaAgrupa as short,\n\t\tTipolinea as string,\n\t\tCargasAct as integer,\n\t\tCargasAnt as integer,\n\t\tCteDewar as string,\n\t\tNombre as string,\n\t\tMatrizMetro as string,\n\t\tarea as short,\n\t\tcplanta as short,\n\t\tccagrupacion as short,\n\t\tEjeGas as short,\n\t\tEjeMer as short,\n\t\tEjeGE as short,\n\t\tDistribuidor as string,\n\t\tuniene as decimal(18,2),\n\t\tunifeb as decimal(18,2),\n\t\tunimar as decimal(18,2),\n\t\tuniabr as decimal(18,2),\n\t\tunimay as decimal(18,2),\n\t\tunijun as decimal(18,2),\n\t\tunijul as decimal(18,2),\n\t\tuniago as decimal(18,2),\n\t\tunisep as decimal(18,2),\n\t\tunioct as decimal(18,2),\n\t\tuninov as decimal(18,2),\n\t\tunidic as decimal(18,2),\n\t\tvalene as decimal(18,2),\n\t\tvalfeb as decimal(18,2),\n\t\tvalmar as decimal(18,2),\n\t\tvalabr as decimal(18,2),\n\t\tvalmay as decimal(18,2),\n\t\tvaljun as decimal(18,2),\n\t\tvaljul as decimal(18,2),\n\t\tvalago as decimal(18,2),\n\t\tvalsep as decimal(18,2),\n\t\tvaloct as decimal(18,2),\n\t\tvalnov as decimal(18,2),\n\t\tvaldic as decimal(18,2),\n\t\tCarene as integer,\n\t\tCarfeb as integer,\n\t\tCarmar as integer,\n\t\tCarabr as integer,\n\t\tCarmay as integer,\n\t\tCarjun as integer,\n\t\tCarjul as integer,\n\t\tCarago as integer,\n\t\tCarsep as integer,\n\t\tCaroct as integer,\n\t\tCarnov as integer,\n\t\tCardic as integer\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> VentaxLinea\nsource(output(\n\t\tSuc as short,\n\t\tCliente as integer,\n\t\tCiudad as string,\n\t\tEstado as string,\n\t\tCodpos as string,\n\t\tTelefono as string,\n\t\tEMail as string,\n\t\tDistribuidor as string,\n\t\tNombreCte as string,\n\t\tCorreoFactura as string,\n\t\tFechaAlta as timestamp,\n\t\tEmailFinal as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> ArchivoCorreos\nCatalogoSuc select(mapColumn(\n\t\tSucursal,\n\t\tNombreSuc,\n\t\tAgrupadas,\n\t\tArea\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nArchivoCorreos, Select1 join(Suc == Sucursal,\n\tjoinType:'left',\n\tbroadcast: 'auto')~> Join2\nJoin2 select(mapColumn(\n\t\tSuc,\n\t\tCliente,\n\t\tCiudad,\n\t\tEstado,\n\t\tCodpos,\n\t\tTelefono,\n\t\tDistribuidor,\n\t\tNombreCte,\n\t\tNombreSuc,\n\t\tAgrupadas,\n\t\tEmailFinal,\n\t\tFechaAlta\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select5\nSelect5, Select7 join(Select5@Suc == Select7@Suc\n\t&& Select5@Cliente == Select7@Cliente,\n\tjoinType:'left',\n\tbroadcast: 'auto')~> Join3\nJoin3 select(skipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select6\nVentaxLinea select(mapColumn(\n\t\tAnio,\n\t\tSuc,\n\t\tCliente,\n\t\tLinea,\n\t\tLineaAgrupa,\n\t\tTipolinea,\n\t\tvalene,\n\t\tvalfeb,\n\t\tvalmar,\n\t\tvalabr,\n\t\tvalmay,\n\t\tvaljun,\n\t\tvaljul,\n\t\tvalago,\n\t\tvalsep,\n\t\tvaloct,\n\t\tvalnov,\n\t\tvaldic\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select7\nSelect6 derive(Suc = Suc,\n\t\tDistribuidor = case(isNull(Distribuidor)||Distribuidor==\"\"||upper(Distribuidor)==\"NO\"||upper(Distribuidor)==\"N\", \"NO\", \"SI\"),\n\t\tIndicadorLinea = case(Linea==201 || Linea==250,Linea,case(Tipolinea==\"G\"||Tipolinea==\"M\"||Tipolinea==\"E\",LineaAgrupa)),\n\t\tvalene = case(Anio<year(currentDate()),valene,case($month<1 || $year < year(currentDate()),toDecimal(0),valene)),\n\t\tvalfeb = case(Anio<year(currentDate()),valfeb,case($month<2 || $year < year(currentDate()),toDecimal(0),valfeb)),\n\t\tvalmar = case(Anio<year(currentDate()),valmar,case($month<3 || $year < year(currentDate()),toDecimal(0),valmar)),\n\t\tvalabr = case(Anio<year(currentDate()),valabr,case($month<4 || $year < year(currentDate()),toDecimal(0),valabr)),\n\t\tvalmay = case(Anio<year(currentDate()),valmay,case($month<5 || $year < year(currentDate()),toDecimal(0),valmay)),\n\t\tvaljun = case(Anio<year(currentDate()),valjun,case($month<6 || $year < year(currentDate()),toDecimal(0),valjun)),\n\t\tvaljul = case(Anio<year(currentDate()),valjul,case($month<7 || $year < year(currentDate()),toDecimal(0),valjul)),\n\t\tvalago = case(Anio<year(currentDate()),valago,case($month<8 || $year < year(currentDate()),toDecimal(0),valago)),\n\t\tvalsep = case(Anio<year(currentDate()),valsep,case($month<9 || $year < year(currentDate()),toDecimal(0),valsep)),\n\t\tvaloct = case(Anio<year(currentDate()),valoct,case($month<10 || $year < year(currentDate()),toDecimal(0),valoct)),\n\t\tvalnov = case(Anio<year(currentDate()),valnov,case($month<11 || $year < year(currentDate()),toDecimal(0),valnov)),\n\t\tvaldic = case(Anio<year(currentDate()),valdic,case($month<12 || $year < year(currentDate()),toDecimal(0),valdic)),\n\t\tEmailFinal = EmailFinal,\n\t\tSuma = case(\r\n    (isNull(valene))&&\r\n    (isNull(valfeb))&&\r\n    (isNull(valmar))&&\r\n    (isNull(valabr))&&\r\n    (isNull(valmay))&&\r\n    (isNull(valjun))&&\r\n    (isNull(valjul))&&\r\n    (isNull(valago))&&\r\n    (isNull(valsep))&&\r\n    (isNull(valoct))&&\r\n    (isNull(valnov))&&\r\n    (isNull(valdic)),1,0)) ~> DerivedColumn1\nDerivedColumn12 pivot(groupBy(Suc,\n\t\tCliente,\n\t\tAnio),\n\tpivotBy(IndicadorLinea),\n\t{} = sum(valene+valfeb+valmar+valabr+valmay+valjun+valjul+valago+valsep+valoct+valnov+valdic),\n\tcolumnNaming: '$N$V',\n\tlateral: true) ~> Pivot1\nSelect12, Pivot1 join(Select12@Suc == Pivot1@Suc\n\t&& Select12@Cliente == Pivot1@Cliente,\n\tjoinType:'right',\n\tbroadcast: 'auto')~> Join4\nDerivedColumn1 select(mapColumn(\n\t\tSuc,\n\t\tCliente,\n\t\tCiudad,\n\t\tEstado,\n\t\tCodpos,\n\t\tTelefono,\n\t\tDistribuidor,\n\t\tNombreCte,\n\t\tNombreSuc,\n\t\tAnio,\n\t\tEmailFinal,\n\t\tFechaAlta,\n\t\tAgrupadas\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select9\nJoin4 select(skipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select10\nPivot1 aggregate(groupBy(mycols = sha2(256,Suc,Cliente,Anio)),\n\teach(match(true()), $$ = first($$))) ~> UniquePivot\nSort1 aggregate(groupBy(mycols = sha2(256,Suc,Cliente)),\n\teach(match(true()), $$ = first($$))) ~> UniquePrincipal\nDerivedColumn1 filter(!(isNull(EmailFinal)||EmailFinal==\"\")&&!(isNull(IndicadorLinea))&&Suma==0) ~> Filter3\nUniquePrincipal select(mapColumn(\n\t\tSuc,\n\t\tNombreSuc,\n\t\tCliente,\n\t\tNombreCte,\n\t\tFechaAlta,\n\t\tEstado,\n\t\tCiudad,\n\t\tCodpos,\n\t\tTelefono,\n\t\tDistribuidor,\n\t\tEmail = EmailFinal,\n\t\tAgrupadas\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select11\nFilter3 derive(Suc = Agrupadas) ~> DerivedColumn12\nFilter4 sort(desc(Anio, false)) ~> Sort1\nSelect9 filter(Suc==Agrupadas) ~> Filter4\nSelect11 derive(Suc = Agrupadas) ~> DerivedColumn14\nDerivedColumn14 select(mapColumn(\n\t\tSuc,\n\t\tNombreSuc,\n\t\tCliente,\n\t\tNombreCte,\n\t\tFechaAlta,\n\t\tEstado,\n\t\tCiudad,\n\t\tCodpos,\n\t\tTelefono,\n\t\tDistribuidor,\n\t\tEmail\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select12\nSelect10 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\trecreate:true,\n\tformat: 'table',\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\terrorHandlingOption: 'stopOnFirstError') ~> sink1"
+		}
+	}
+}

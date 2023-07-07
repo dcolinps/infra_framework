@@ -1,0 +1,38 @@
+{
+	"name": "Ds_explotacionbd",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Ls_AzureDataLakeExplotacionBD",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"UserMail": {
+				"type": "string"
+			},
+			"ConsultaSql": {
+				"type": "string"
+			},
+			"NombreConsulta": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": {
+					"value": "@dataset().UserMail",
+					"type": "Expression"
+				},
+				"fileSystem": "data"
+			},
+			"columnDelimiter": ",",
+			"compressionCodec": "ZipDeflate",
+			"encodingName": "ISO-8859-1",
+			"escapeChar": "\\",
+			"quoteChar": "\""
+		},
+		"schema": []
+	}
+}

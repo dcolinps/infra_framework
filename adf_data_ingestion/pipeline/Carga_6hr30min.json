@@ -1,0 +1,195 @@
+{
+	"name": "Carga_6hr30min",
+	"properties": {
+		"activities": [
+			{
+				"name": "Send_Email_Succes",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "MasterPipeline_RentabilidadEquiposMedicos",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Pipeline_6hr30min_IMSS",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Pipeline_Existencias",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://prod-07.southcentralus.logic.azure.com:443/workflows/cb6faa66c0bd48979f0aec6eae8d7ad7/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=rUsYktCWjtzQOCVXROyUvqLPeo3DT0QGpP3gJpcFV6w",
+					"method": "POST",
+					"body": {
+						"value": "{\n    \"title\": \"@{pipeline().Pipeline} Se completó correctamente!\",\n    \"message\": \"El proceso de ingesta de datos fue un Éxito!\",\n    \"color\": \"Green\",\n    \"dataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"pipelineName\": \"@{pipeline().Pipeline}\",\n    \"pipelineRunId\": \"@{pipeline().RunId}\",\n    \"time\": \"@{utcnow()}\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "MasterPipeline_RentabilidadEquiposMedicos",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "RentabilidadMedica",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "Send_Email_Failure_RentabilidadDeEquiposMedicos",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "MasterPipeline_RentabilidadEquiposMedicos",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://prod-07.southcentralus.logic.azure.com:443/workflows/cb6faa66c0bd48979f0aec6eae8d7ad7/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=rUsYktCWjtzQOCVXROyUvqLPeo3DT0QGpP3gJpcFV6w",
+					"method": "POST",
+					"body": {
+						"value": "{\n    \"title\": \"@{activity('MasterPipeline_RentabilidadEquiposMedicos').output.pipelineName} No se pudo completar!\",\n    \"message\": \"El proceso de ingesta de datos tuvo un error!\",\n    \"color\": \"Red\",\n    \"dataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"pipelineName\": \"@{activity('MasterPipeline_RentabilidadEquiposMedicos').output.pipelineName}\",\n    \"pipelineRunId\": \"@{activity('MasterPipeline_RentabilidadEquiposMedicos').output.pipelineRunId}\",\n    \"time\": \"@{utcnow()}\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Pipeline_6hr30min_IMSS",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "SQL2AZ_IMSS",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "Send_Email_Failure_Pipeline_6hr30min_IMSS",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Pipeline_6hr30min_IMSS",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://prod-07.southcentralus.logic.azure.com:443/workflows/cb6faa66c0bd48979f0aec6eae8d7ad7/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=rUsYktCWjtzQOCVXROyUvqLPeo3DT0QGpP3gJpcFV6w",
+					"method": "POST",
+					"body": {
+						"value": "{\n    \"title\": \"@{activity('Pipeline_6hr30min_IMSS').output.pipelineName} No se pudo completar!\",\n    \"message\": \"El proceso de ingesta de datos tuvo un error!\",\n    \"color\": \"Red\",\n    \"dataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"pipelineName\": \"@{activity('Pipeline_6hr30min_IMSS').output.pipelineName}\",\n    \"pipelineRunId\": \"@{activity('Pipeline_6hr30min_IMSS').output.pipelineRunId}\",\n    \"time\": \"@{utcnow()}\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Pipeline_Existencias",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Existencias",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "Send_Email_Failure_Pipeline_Existencias",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Pipeline_Existencias",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://prod-07.southcentralus.logic.azure.com:443/workflows/cb6faa66c0bd48979f0aec6eae8d7ad7/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=rUsYktCWjtzQOCVXROyUvqLPeo3DT0QGpP3gJpcFV6w",
+					"method": "POST",
+					"body": {
+						"value": "{\n    \"title\": \"@{activity('Pipeline_Existencias').output.pipelineName} No se pudo completar!\",\n    \"message\": \"El proceso de ingesta de datos tuvo un error!\",\n    \"color\": \"Red\",\n    \"dataFactoryName\": \"@{pipeline().DataFactory}\",\n    \"pipelineName\": \"@{activity('Pipeline_Existencias').output.pipelineName}\",\n    \"pipelineRunId\": \"@{activity('Pipeline_Existencias').output.pipelineRunId}\",\n    \"time\": \"@{utcnow()}\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "CambioDeCierre",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Send_Email_Succes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Condicional_CambioDeCierre",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			}
+		],
+		"folder": {
+			"name": "09_Master"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-02-10T22:44:40Z"
+	}
+}

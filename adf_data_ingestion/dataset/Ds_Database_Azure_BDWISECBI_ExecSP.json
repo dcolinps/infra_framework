@@ -1,0 +1,15 @@
+{
+	"name": "Ds_Database_Azure_BDWISECBI_ExecSP",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Ls_AzureSql",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"secret_name": "KV-Database-Azure-BDWISECBI"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": []
+	}
+}

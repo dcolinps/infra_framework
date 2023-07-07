@@ -1,0 +1,467 @@
+{
+	"name": "harddelete_bronze_oracle",
+	"properties": {
+		"activities": [
+			{
+				"name": "Params_Validation",
+				"description": "Check if Parameters is not null",
+				"type": "IfCondition",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@or(empty(pipeline().parameters.src_name),or(empty(pipeline().parameters.schema_name),or(empty(pipeline().parameters.obj_name),or(empty(pipeline().parameters.load_type),or(empty(pipeline().parameters.harddelete_select_stmt),or(empty(pipeline().parameters.harddelete_file_path),or(empty(pipeline().parameters.hard_delete_incr_cond),or(empty(pipeline().parameters.db_name),or(empty(pipeline().parameters.databricks_incr_cond),or(empty(pipeline().parameters.conn_vault_name),or(empty(pipeline().parameters.cmpst_join_sql),empty(pipeline().parameters.cmpst_key))))))))))))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Delete hard delete Parquet files if already exists",
+							"type": "Delete",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "Ds_BronzeParquet",
+									"type": "DatasetReference",
+									"parameters": {
+										"bronze_path": {
+											"value": "@pipeline().parameters.harddelete_file_path",
+											"type": "Expression"
+										}
+									}
+								},
+								"enableLogging": false,
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"wildcardFileName": "*"
+								}
+							}
+						},
+						{
+							"name": "Switch based on Load Type and Split By",
+							"type": "Switch",
+							"dependsOn": [
+								{
+									"activity": "Delete hard delete Parquet files if already exists",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"on": {
+									"value": "@concat(pipeline().parameters.load_type, ' - no splitby ',\nstring(empty(pipeline().parameters.split_by_col))\n)",
+									"type": "Expression"
+								},
+								"cases": [
+									{
+										"value": "F - no splitby True",
+										"activities": [
+											{
+												"name": "Copy data - Full Load No Split By",
+												"type": "Copy",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "OracleSource",
+														"oracleReaderQuery": {
+															"value": "@pipeline().parameters.harddelete_select_stmt",
+															"type": "Expression"
+														},
+														"partitionOption": "None",
+														"queryTimeout": "02:00:00"
+													},
+													"sink": {
+														"type": "ParquetSink",
+														"storeSettings": {
+															"type": "AzureBlobFSWriteSettings",
+															"maxConcurrentConnections": 10,
+															"blockSizeInMB": 20
+														},
+														"formatSettings": {
+															"type": "ParquetWriteSettings"
+														}
+													},
+													"enableStaging": false,
+													"parallelCopies": 32,
+													"dataIntegrationUnits": 32
+												},
+												"inputs": [
+													{
+														"referenceName": "Ds_OracleTable",
+														"type": "DatasetReference",
+														"parameters": {
+															"secret_name": {
+																"value": "@pipeline().parameters.conn_vault_name",
+																"type": "Expression"
+															}
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "Ds_BronzeParquet",
+														"type": "DatasetReference",
+														"parameters": {
+															"bronze_path": {
+																"value": "@pipeline().parameters.harddelete_file_path",
+																"type": "Expression"
+															}
+														}
+													}
+												]
+											}
+										]
+									},
+									{
+										"value": "F - no splitby False",
+										"activities": [
+											{
+												"name": "Copy data - Full Load Splitby",
+												"type": "Copy",
+												"dependsOn": [
+													{
+														"activity": "Lookup Source Object",
+														"dependencyConditions": [
+															"Succeeded"
+														]
+													}
+												],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "OracleSource",
+														"oracleReaderQuery": {
+															"value": "@concat(pipeline().parameters.harddelete_select_stmt,' and ?AdfRangePartitionColumnName <= ?AdfRangePartitionUpbound AND ?AdfRangePartitionColumnName >= ?AdfRangePartitionLowbound ')",
+															"type": "Expression"
+														},
+														"partitionOption": "DynamicRange",
+														"partitionSettings": {
+															"partitionColumnName": {
+																"value": "@{pipeline().parameters.split_by_col}",
+																"type": "Expression"
+															},
+															"partitionUpperBound": {
+																"value": "@{activity('Lookup Source Object').output.firstRow.max_value}",
+																"type": "Expression"
+															},
+															"partitionLowerBound": {
+																"value": "@{activity('Lookup Source Object').output.firstRow.min_value}",
+																"type": "Expression"
+															}
+														},
+														"queryTimeout": "02:00:00"
+													},
+													"sink": {
+														"type": "ParquetSink",
+														"storeSettings": {
+															"type": "AzureBlobFSWriteSettings",
+															"maxConcurrentConnections": 10,
+															"blockSizeInMB": 20
+														},
+														"formatSettings": {
+															"type": "ParquetWriteSettings"
+														}
+													},
+													"enableStaging": false,
+													"parallelCopies": 32,
+													"dataIntegrationUnits": 32
+												},
+												"inputs": [
+													{
+														"referenceName": "Ds_OracleTable",
+														"type": "DatasetReference",
+														"parameters": {
+															"secret_name": {
+																"value": "@pipeline().parameters.conn_vault_name",
+																"type": "Expression"
+															}
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "Ds_BronzeParquet",
+														"type": "DatasetReference",
+														"parameters": {
+															"bronze_path": {
+																"value": "@pipeline().parameters.harddelete_file_path",
+																"type": "Expression"
+															}
+														}
+													}
+												]
+											},
+											{
+												"name": "Lookup Source Object",
+												"type": "Lookup",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "7.00:00:00",
+													"retry": 2,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "OracleSource",
+														"oracleReaderQuery": {
+															"value": "@concat('select min(',\npipeline().parameters.split_by_col,\n') as min_value, max(',\npipeline().parameters.split_by_col,\n') as max_value  from ',\npipeline().parameters.schema_name,\n'.',\npipeline().parameters.obj_name,\n' where 1 = 1 ',\npipeline().parameters.hard_delete_incr_cond\n)",
+															"type": "Expression"
+														},
+														"partitionOption": "None",
+														"queryTimeout": "02:00:00"
+													},
+													"dataset": {
+														"referenceName": "Ds_OracleTable",
+														"type": "DatasetReference",
+														"parameters": {
+															"secret_name": {
+																"value": "@pipeline().parameters.conn_vault_name",
+																"type": "Expression"
+															}
+														}
+													},
+													"firstRowOnly": true
+												}
+											}
+										]
+									}
+								]
+							}
+						},
+						{
+							"name": "silver_harddelete",
+							"type": "DatabricksNotebook",
+							"dependsOn": [
+								{
+									"activity": "Switch based on Load Type and Split By",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "PPG_Billing Name",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": {
+									"value": "/framework_ingestion/silver/@{pipeline().parameters.notebook_version}/silver_harddelete",
+									"type": "Expression"
+								},
+								"baseParameters": {
+									"db_name": {
+										"value": "@pipeline().parameters.db_name",
+										"type": "Expression"
+									},
+									"tbl_name": {
+										"value": "@pipeline().parameters.obj_name",
+										"type": "Expression"
+									},
+									"src_path": {
+										"value": "@pipeline().parameters.harddelete_file_path",
+										"type": "Expression"
+									},
+									"src_name": {
+										"value": "@pipeline().parameters.src_name",
+										"type": "Expression"
+									},
+									"schema_name": {
+										"value": "@pipeline().parameters.schema_name",
+										"type": "Expression"
+									},
+									"cmpst_key": {
+										"value": "@pipeline().parameters.cmpst_key",
+										"type": "Expression"
+									},
+									"incr_query": {
+										"value": "@pipeline().parameters.databricks_incr_cond",
+										"type": "Expression"
+									},
+									"cmpst_join_sql": {
+										"value": "@pipeline().parameters.cmpst_join_sql",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Ls_IngestionDatabricks",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"cluster_version": {
+										"value": "@activity('PPG_Billing Name').output.firstRow.cluster_version",
+										"type": "Expression"
+									},
+									"worker_count": "1",
+									"billing_name": {
+										"value": "@activity('PPG_Billing Name').output.firstRow.billing_name",
+										"type": "Expression"
+									},
+									"pool_id": {
+										"value": "@activity('PPG_Billing Name').output.firstRow.pool_id",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "PPG_Billing Name",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 2,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderStoredProcedureName": "[dbo].[sp_get_databricks_billing]",
+									"storedProcedureParameters": {
+										"DATAFACTORY_NAME": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().DataFactory",
+												"type": "Expression"
+											}
+										},
+										"PROJECT_NAME": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.project_name",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "Ds_GetBilling",
+									"type": "DatasetReference"
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Error Throw",
+							"description": "Throwing Error when parameters is null",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "ErrorCatch",
+								"value": {
+									"value": "@div(1,0)",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"schema_name": {
+				"type": "string"
+			},
+			"obj_name": {
+				"type": "string"
+			},
+			"harddelete_select_stmt": {
+				"type": "string"
+			},
+			"split_by_col": {
+				"type": "string"
+			},
+			"conn_vault_name": {
+				"type": "string"
+			},
+			"harddelete_file_path": {
+				"type": "string"
+			},
+			"load_type": {
+				"type": "string"
+			},
+			"mappers": {
+				"type": "string"
+			},
+			"hard_delete_incr_cond": {
+				"type": "string"
+			},
+			"src_name": {
+				"type": "string"
+			},
+			"db_name": {
+				"type": "string"
+			},
+			"cmpst_key": {
+				"type": "string"
+			},
+			"cmpst_join_sql": {
+				"type": "string"
+			},
+			"databricks_incr_cond": {
+				"type": "string"
+			},
+			"notebook_version": {
+				"type": "string"
+			},
+			"project_name": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"ErrorCatch": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "00_Ingestion_Framework/05_Hardelete"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-12-09T07:58:59Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

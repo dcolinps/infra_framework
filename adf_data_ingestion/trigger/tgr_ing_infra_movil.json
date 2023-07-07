@@ -1,0 +1,43 @@
+{
+	"name": "tgr_ing_infra_movil",
+	"properties": {
+		"annotations": [
+			"Ingestion de Fuente de Infra Movil"
+		],
+		"runtimeState": "Started",
+		"pipeline": {
+			"pipelineReference": {
+				"referenceName": "infra_main",
+				"type": "PipelineReference"
+			},
+			"parameters": {
+				"src_name": "infra_movil",
+				"batch_id": "1",
+				"job_name": "m_adf_src_bronze_100",
+				"src_schema_id_list": "140001",
+				"app_id": "0",
+				"notebook_version": "1.0",
+				"project_name": "cloud_sec",
+				"lock_name": "0",
+				"dw_schema_id": "0",
+				"dep_src_name": "0",
+				"aas_schema_id": "0",
+				"notebook_path": "0",
+				"silver_src_env": "0",
+				"health_check": "0"
+			}
+		},
+		"type": "TumblingWindowTrigger",
+		"typeProperties": {
+			"frequency": "Hour",
+			"interval": 24,
+			"startTime": "2022-10-12T10:00:00Z",
+			"delay": "00:00:00",
+			"maxConcurrency": 50,
+			"retryPolicy": {
+				"intervalInSeconds": 30
+			},
+			"dependsOn": []
+		}
+	}
+}

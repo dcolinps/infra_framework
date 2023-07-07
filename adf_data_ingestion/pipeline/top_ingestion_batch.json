@@ -1,0 +1,148 @@
+{
+	"name": "top_ingestion_batch",
+	"properties": {
+		"activities": [
+			{
+				"name": "Check Status of Dep Src System",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "select count(*) as Cnt from @{pipeline().parameters.AUDIT_SCHEMA}.BATCH_RUN_STATS where src_system = '@{pipeline().parameters.DEP_APP_SRC_NAME}'\nand BATCH_STATUS = 'IN PROGRESS'",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "If Condition1",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Check Status of Dep Src System",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@and(greater(activity('Check Status of Dep Src System').output.firstRow.Cnt,0),greater(pipeline().parameters.APP_ID,0))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Set batch run id",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 2,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderStoredProcedureName": {
+										"value": "@{pipeline().parameters.AUDIT_SCHEMA}.[SET_BATCH_RUN_ID]",
+										"type": "Expression"
+									},
+									"storedProcedureParameters": {
+										"APP_ID": {
+											"type": "Int32",
+											"value": {
+												"value": "@pipeline().parameters.APP_ID",
+												"type": "Expression"
+											}
+										},
+										"AUDIT_SCHEMA": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.AUDIT_SCHEMA",
+												"type": "Expression"
+											}
+										},
+										"SRC_NAME": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.SRC_NAME",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "Ds_GetsetMetadata",
+									"type": "DatasetReference"
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Error Throw",
+							"description": "Throwing Error when parameters is null",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "ErrorCatch",
+								"value": {
+									"value": "@div(1,0)",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"APP_ID": {
+				"type": "int"
+			},
+			"AUDIT_SCHEMA": {
+				"type": "string"
+			},
+			"SRC_NAME": {
+				"type": "string"
+			},
+			"DEP_APP_SRC_NAME": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"ErrorCatch": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "00_Ingestion_Framework/04_Top"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-12-09T07:58:59Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

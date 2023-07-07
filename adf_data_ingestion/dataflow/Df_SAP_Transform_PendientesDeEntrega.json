@@ -1,0 +1,188 @@
+{
+	"name": "Df_SAP_Transform_PendientesDeEntrega",
+	"properties": {
+		"folder": {
+			"name": "Dataflow_PendientesEntrega"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "Compradores"
+				},
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "Proveedores"
+				},
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "ME2L"
+				},
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "ME5A"
+				},
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "NotasSobrePedidos"
+				},
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "TipoDeCambio"
+				},
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "TipoDeCompra"
+				},
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "ME2LDetalle"
+				},
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "Area"
+				},
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "Imputacion"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "Ds_Database_Azure_BDWISECBI",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Join8"
+				},
+				{
+					"name": "Select8"
+				},
+				{
+					"name": "Join9"
+				},
+				{
+					"name": "Select9"
+				},
+				{
+					"name": "DerivedColumn1"
+				},
+				{
+					"name": "Join10"
+				},
+				{
+					"name": "Select10"
+				},
+				{
+					"name": "Join11"
+				},
+				{
+					"name": "Select11"
+				},
+				{
+					"name": "Join12"
+				},
+				{
+					"name": "Select12"
+				},
+				{
+					"name": "Join13"
+				},
+				{
+					"name": "Select13"
+				},
+				{
+					"name": "Join14"
+				},
+				{
+					"name": "Select14"
+				},
+				{
+					"name": "DerivedColumn2"
+				},
+				{
+					"name": "DerivedColumn3"
+				},
+				{
+					"name": "Select15"
+				},
+				{
+					"name": "Join15"
+				},
+				{
+					"name": "Select16"
+				},
+				{
+					"name": "DerivedColumn4"
+				},
+				{
+					"name": "CompradoresFinal"
+				},
+				{
+					"name": "ProveedoresFinal"
+				},
+				{
+					"name": "ME2LFinal"
+				},
+				{
+					"name": "ME5AFinal"
+				},
+				{
+					"name": "TipoDeCambioFinal"
+				},
+				{
+					"name": "ME2LDetalleFinal"
+				},
+				{
+					"name": "ImputacionFinal"
+				},
+				{
+					"name": "Join16"
+				},
+				{
+					"name": "Select17"
+				},
+				{
+					"name": "hardcodeFechaultlib"
+				}
+			],
+			"script": "parameters{\n\tFechaDeCarga as timestamp (currentUTC())\n}\nsource(output(\n\t\tEKGRP as string,\n\t\tEKNAM as string,\n\t\tFechaProceso as timestamp,\n\t\tFechaRegistro as timestamp\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> Compradores\nsource(output(\n\t\tLIFNR as string,\n\t\tNAME1 as string,\n\t\tSTCD1 as string,\n\t\tSTREET as string,\n\t\tHOUSE_NUM1 as string,\n\t\tHOUSE_NUM2 as string,\n\t\tCITY2 as string,\n\t\tPOST_CODE1 as string,\n\t\tCITY1 as string,\n\t\tCOUNTRY as string,\n\t\tREGION as string,\n\t\tFechaProceso as timestamp,\n\t\tFechaRegistro as timestamp\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> Proveedores\nsource(output(\n\t\tEBELN as string,\n\t\tEBDAT as date,\n\t\tBKGRP as string,\n\t\tEKORG as string,\n\t\tELIFN as string,\n\t\tWAERS as string,\n\t\tZED_TIPO_COMPRAS as string,\n\t\tFechaUltLib as date,\n\t\tFechaProceso as timestamp,\n\t\tFechaRegistro as timestamp\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinferDriftedColumnTypes: true,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> ME2L\nsource(output(\n\t\tBANFN as string,\n\t\tBNFPO as integer,\n\t\tMATNR as string,\n\t\tBAMNG as decimal(18,3),\n\t\tBAPRE as decimal(18,2),\n\t\tBAMEI as string,\n\t\tRLWRT as decimal(18,2),\n\t\tWAERS as string,\n\t\tAFNAM as string,\n\t\tEKORG as string,\n\t\tBADAT as date,\n\t\tERNAM as string,\n\t\tEPEIN as integer,\n\t\tFechaUltLib as date,\n\t\tFechaProceso as timestamp,\n\t\tFechaRegistro as timestamp\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> ME5A\nsource(output(\n\t\tPedido as string,\n\t\tPosicion as integer,\n\t\tNota as string,\n\t\tFechaProceso as timestamp,\n\t\tFechaRegistro as timestamp\n\t),\n\tallowSchemaDrift: false,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> NotasSobrePedidos\nsource(output(\n\t\tGDATU as date,\n\t\tFCURR as string,\n\t\tTCURRENCY as string,\n\t\tUKURS as decimal(10,5),\n\t\tFechaProceso as timestamp,\n\t\tFechaRegistro as timestamp\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> TipoDeCambio\nsource(output(\n\t\tTIPOCOMPRA as string,\n\t\tDESCRIPCION as string,\n\t\tFechaProceso as timestamp,\n\t\tFechaRegistro as timestamp\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> TipoDeCompra\nsource(output(\n\t\tEBELN as string,\n\t\tEBELP as integer,\n\t\tEINDT as date,\n\t\tMATNR as string,\n\t\tTXZ01 as string,\n\t\tMATKL as integer,\n\t\tEWERK as string,\n\t\tLGORT_D as string,\n\t\tBANFN as string,\n\t\tBNFPO as integer,\n\t\tBSTMG as decimal(18,3),\n\t\tBSTME as string,\n\t\tBPREI as decimal(18,2),\n\t\tBWERT as decimal(18,2),\n\t\tEPEIN as integer,\n\t\tMGINV as decimal(18,3),\n\t\tMGLIEF as decimal(18,2),\n\t\tFechaProceso as timestamp,\n\t\tFechaRegistro as timestamp\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> ME2LDetalle\nsource(output(\n\t\tmycols as string,\n\t\tSolicitante as string,\n\t\tArea as string,\n\t\tFechaProceso as timestamp\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> Area\nsource(output(\n\t\tBANFN as string,\n\t\tBNFPO as integer,\n\t\tKOSTL as string,\n\t\tSAKTO as string,\n\t\tAUFNR as string,\n\t\tFechaProceso as timestamp,\n\t\tFechaRegistro as timestamp\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> Imputacion\nME2LFinal, CompradoresFinal join(GpoCompras == Grupo,\n\tjoinType:'left',\n\tbroadcast: 'auto')~> Join8\nJoin8 select(mapColumn(\n\t\tPedido,\n\t\tFechaDoc,\n\t\tGpoCompras,\n\t\tOrgCompras,\n\t\tNumProv,\n\t\tMoneda,\n\t\tTipoCompra,\n\t\tFechaUltLib,\n\t\tFechaProceso = CompradoresFinal@FechaProceso,\n\t\tNomGpo,\n\t\tFechaProceso = CompradoresFinal@FechaProceso\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select8\nSelect8, ME2LDetalleFinal join(Select8@Pedido == ME2LDetalleFinal@Pedido,\n\tjoinType:'inner',\n\tbroadcast: 'auto')~> Join9\nJoin9 select(mapColumn(\n\t\tPedido = Select8@Pedido,\n\t\tPosicion,\n\t\tFechaDoc,\n\t\tGpoCompras,\n\t\tOrgCompras,\n\t\tNumProv,\n\t\tMoneda,\n\t\tTipoCompra,\n\t\tFechaUltLib,\n\t\tFechaProceso = Select8@FechaProceso,\n\t\tNomGpo,\n\t\tPedido = Select8@Pedido,\n\t\tPosicion,\n\t\tFechaEntrega,\n\t\tMaterial,\n\t\tTextoBreve,\n\t\tCentro,\n\t\tAlmacen,\n\t\tGpoArticulo,\n\t\tSolPed,\n\t\tPosicionSolPed,\n\t\tCantidadPedido,\n\t\tUMPedido,\n\t\tPrecioNeto,\n\t\tValorNetoPedido,\n\t\tCantidadBase,\n\t\tPorCalcular,\n\t\tPorEntregar,\n\t\tFechaProceso = Select8@FechaProceso\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select9\nSelect9 derive(NomGpo = case(GpoArticulo==5, \"Carlos Verver\", NomGpo)) ~> DerivedColumn1\nDerivedColumn1, TipoDeCompra join(Select9@TipoCompra == TipoDeCompra@TIPOCOMPRA,\n\tjoinType:'left',\n\tbroadcast: 'auto')~> Join10\nJoin10 select(mapColumn(\n\t\tPedido,\n\t\tPosicion,\n\t\tFechaDoc,\n\t\tGpoCompras,\n\t\tOrgCompras,\n\t\tNumProv,\n\t\tMoneda,\n\t\tTipoCompra = Select9@TipoCompra,\n\t\tFechaUltLib,\n\t\tFechaProceso = Select9@FechaProceso,\n\t\tNomGpo,\n\t\tFechaEntrega,\n\t\tMaterial,\n\t\tTextoBreve,\n\t\tCentro,\n\t\tAlmacen,\n\t\tGpoArticulo,\n\t\tSolPed,\n\t\tPosicionSolPed,\n\t\tCantidadPedido,\n\t\tUMPedido,\n\t\tPrecioNeto,\n\t\tValorNetoPedido,\n\t\tCantidadBase,\n\t\tPorCalcular,\n\t\tPorEntregar,\n\t\tDescripcion = DESCRIPCION,\n\t\tFechaProceso = TipoDeCompra@FechaProceso\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select10\nSelect10, ProveedoresFinal join(NumProv == NumProveedor,\n\tjoinType:'left',\n\tbroadcast: 'auto')~> Join11\nJoin11 select(mapColumn(\n\t\tPedido,\n\t\tPosicion,\n\t\tFechaDoc,\n\t\tGpoCompras,\n\t\tOrgCompras,\n\t\tNumProv,\n\t\tMoneda,\n\t\tTipoCompra,\n\t\tFechaUltLib,\n\t\tFechaProceso = ProveedoresFinal@FechaProceso,\n\t\tNomGpo,\n\t\tFechaEntrega,\n\t\tMaterial,\n\t\tTextoBreve,\n\t\tCentro,\n\t\tAlmacen,\n\t\tGpoArticulo,\n\t\tSolPed,\n\t\tPosicionSolPed,\n\t\tCantidadPedido,\n\t\tUMPedido,\n\t\tPrecioNeto,\n\t\tValorNetoPedido,\n\t\tCantidadBase,\n\t\tPorCalcular,\n\t\tPorEntregar,\n\t\tDescripcion,\n\t\tNombreProveedor,\n\t\tRFC,\n\t\tCalle,\n\t\tNumExt,\n\t\tNumInt,\n\t\tDistrito,\n\t\tCodigoPostal,\n\t\tPoblacion,\n\t\tPais,\n\t\tRegion,\n\t\tFechaProceso = ProveedoresFinal@FechaProceso\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select11\nSelect11, NotasSobrePedidos join(Select11@Pedido == NotasSobrePedidos@Pedido\n\t&& Select11@Posicion == NotasSobrePedidos@Posicion,\n\tjoinType:'left',\n\tbroadcast: 'auto')~> Join12\nJoin12 select(mapColumn(\n\t\tPedido = Select11@Pedido,\n\t\tPosicion = NotasSobrePedidos@Posicion,\n\t\tFechaDoc,\n\t\tGpoCompras,\n\t\tOrgCompras,\n\t\tNumProv,\n\t\tMoneda,\n\t\tTipoCompra,\n\t\tFechaUltLib,\n\t\tFechaProceso = Select11@FechaProceso,\n\t\tNomGpo,\n\t\tFechaEntrega,\n\t\tMaterial,\n\t\tTextoBreve,\n\t\tCentro,\n\t\tAlmacen,\n\t\tGpoArticulo,\n\t\tSolPed,\n\t\tPosicionSolPed,\n\t\tCantidadPedido,\n\t\tUMPedido,\n\t\tPrecioNeto,\n\t\tValorNetoPedido,\n\t\tCantidadBase,\n\t\tPorCalcular,\n\t\tPorEntregar,\n\t\tDescripcion,\n\t\tNombreProveedor,\n\t\tRFC,\n\t\tCalle,\n\t\tNumExt,\n\t\tNumInt,\n\t\tDistrito,\n\t\tCodigoPostal,\n\t\tPoblacion,\n\t\tPais,\n\t\tRegion,\n\t\tPedido = NotasSobrePedidos@Pedido,\n\t\tPosicion = NotasSobrePedidos@Posicion,\n\t\tNota,\n\t\tFechaProceso = NotasSobrePedidos@FechaProceso\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select12\nSelect12, ME5AFinal join(Select12@SolPed == ME5AFinal@SolPed\n\t&& Select12@PosicionSolPed == ME5AFinal@PosicionSolPed,\n\tjoinType:'left',\n\tbroadcast: 'auto')~> Join13\nJoin13 select(mapColumn(\n\t\teach(match(true()))\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select13\nSelect17, TipoDeCambioFinal join(FechaDoc == Fecha\n\t&& Moneda == MonedaOrigen,\n\tjoinType:'left',\n\tbroadcast: 'auto')~> Join14\nJoin14 select(mapColumn(\n\t\tPedido,\n\t\tPosicion,\n\t\tFechaDoc,\n\t\tGpoCompras,\n\t\tOrgCompras,\n\t\tNumProv,\n\t\tTipoCompra,\n\t\tFechaUltLib,\n\t\tFechaProceso = Select17@FechaProceso,\n\t\tNomGpo,\n\t\tFechaEntrega,\n\t\tMaterial,\n\t\tTextoBreve,\n\t\tCentro,\n\t\tAlmacen,\n\t\tGpoArticulo,\n\t\tSolPed,\n\t\tPosicionSolPed,\n\t\tCantidadPedido,\n\t\tUMPedido,\n\t\tPrecioNeto,\n\t\tValorNetoPedido,\n\t\tCantidadBase,\n\t\tPorCalcular,\n\t\tPorEntregar,\n\t\tDescripcion,\n\t\tNombreProveedor,\n\t\tRFC,\n\t\tCalle,\n\t\tNumExt,\n\t\tNumInt,\n\t\tDistrito,\n\t\tCodigoPostal,\n\t\tPoblacion,\n\t\tPais,\n\t\tRegion,\n\t\tNota,\n\t\tCantidadSolPed,\n\t\tPrecioVal,\n\t\tValTotal,\n\t\tSolicitante,\n\t\tFechaSolPed,\n\t\tCreador,\n\t\tCenCos,\n\t\tCtaMayor,\n\t\tOrden,\n\t\tFecha,\n\t\tMoneda,\n\t\tMonedaDestino,\n\t\tTipoCambio,\n\t\tFechaProceso = TipoDeCambioFinal@FechaProceso\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select14\nhardcodeFechaultlib derive(ClavePedido = Pedido+\"-\"+toString(Posicion),\n\t\tClaveSolPed = SolPed+\"-\"+toString(PosicionSolPed),\n\t\tIngreso = case(CantidadPedido==PorEntregar && (CantidadPedido!=0),\"NO INGRESADO\",case(PorEntregar==0,\"INGRESO TOTAL\",\"INGRESO PARCIAL\")),\n\t\tContabilizacion = case(CantidadPedido==PorCalcular,\"NO CONTABILIZADO\",case(toInteger(PorEntregar)==0,\"CONTABILIZADO TOTAL\",\"CONTABILIZADO PARCIAL\")),\n\t\tDiasVencimiento = FechaUltLib-FechaEntrega,\n\t\tVencida = case((FechaUltLib-FechaEntrega)>=0,\"SI\",\"NO\"),\n\t\tTiempoVencimiento = case((FechaUltLib-FechaEntrega)<=30,\"Menor a 30\",\r\ncase((FechaUltLib-FechaEntrega)<=90,\"Mayor a 30\",\r\ncase((FechaUltLib-FechaEntrega)<=150,\"Mayor a 90\",\r\ncase((FechaUltLib-FechaEntrega)<=210,\"Mayor a 150\",\r\ncase((FechaUltLib-FechaEntrega)<=270,\"Mayor a 210\",\r\ncase((FechaUltLib-FechaEntrega)<=330,\"Mayor a 270\",\"Mayor a 330\")))))),\n\t\tPedidoMN = case(Moneda==\"MXN\",ValorNetoPedido,ValorNetoPedido*TipoCambio),\n\t\tSolPedMxn = case(Moneda==\"MXN\",ValTotal,ValTotal/TipoCambio),\n\t\tTiempoColocacion = FechaDoc-FechaSolPed,\n\t\tSemana = case(year(currentDate())==year(FechaDoc),case(weekOfYear(FechaDoc)==53&&month(FechaDoc)==1,54,weekOfYear(FechaDoc)+52),weekOfYear(FechaDoc)),\n\t\tClase = case(Pais==\"MX\", \"Nacional\", case(Pais==\"\",\"Sin Categoria\",\"Importación\"))) ~> DerivedColumn2\nDerivedColumn2 derive(AhorroMN = case(isNull(SolPedMxn),toDecimal(0),toDecimal(SolPedMxn)-toDecimal(PedidoMN)),\n\t\tDesviacion = ((toDecimal(PedidoMN)/toDecimal(SolPedMxn))-1.0)*100) ~> DerivedColumn3\nDerivedColumn3 select(mapColumn(\n\t\tPedido,\n\t\tPosicion,\n\t\tFechaDoc,\n\t\tGpoCompras,\n\t\tOrgCompras,\n\t\tNumProv,\n\t\tTipoCompra,\n\t\tFechaUltLib,\n\t\tNomGpo,\n\t\tFechaEntrega,\n\t\tMaterial,\n\t\tTextoBreve,\n\t\tCentro,\n\t\tAlmacen,\n\t\tGpoArticulo,\n\t\tSolPed,\n\t\tPosicionSolPed,\n\t\tCantidadPedido,\n\t\tUMPedido,\n\t\tPrecioNeto,\n\t\tValorNetoPedido,\n\t\tCantidadBase,\n\t\tPorCalcular,\n\t\tPorEntregar,\n\t\tDescripcion,\n\t\tNombreProveedor,\n\t\tRFC,\n\t\tCalle,\n\t\tNumExt,\n\t\tNumInt,\n\t\tDistrito,\n\t\tCodigoPostal,\n\t\tPoblacion,\n\t\tPais,\n\t\tRegion,\n\t\tNota,\n\t\tCantidadSolPed,\n\t\tPrecioVal,\n\t\tValTotal,\n\t\tSolicitante,\n\t\tFechaSolPed,\n\t\tCreador,\n\t\tCenCos,\n\t\tCtaMayor,\n\t\tOrden,\n\t\tFecha,\n\t\tMoneda,\n\t\tMonedaDestino,\n\t\tTipoCambio,\n\t\tClavePedido,\n\t\tClaveSolPed,\n\t\tIngreso,\n\t\tContabilizacion,\n\t\tDiasVencimiento,\n\t\tVencida,\n\t\tTiempoVencimiento,\n\t\tPedidoMN,\n\t\tSolPedMxn,\n\t\tTiempoColocacion,\n\t\tSemana,\n\t\tClase,\n\t\tAhorroMN,\n\t\tDesviacion,\n\t\tArea\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select15\nSelect14, Area join(Select14@Solicitante == Area@Solicitante,\n\tjoinType:'left',\n\tbroadcast: 'auto')~> Join15\nJoin15 select(mapColumn(\n\t\tPedido,\n\t\tPosicion,\n\t\tFechaDoc,\n\t\tGpoCompras,\n\t\tOrgCompras,\n\t\tNumProv,\n\t\tTipoCompra,\n\t\tFechaUltLib,\n\t\tNomGpo,\n\t\tFechaEntrega,\n\t\tMaterial,\n\t\tTextoBreve,\n\t\tCentro,\n\t\tAlmacen,\n\t\tGpoArticulo,\n\t\tSolPed,\n\t\tPosicionSolPed,\n\t\tCantidadPedido,\n\t\tUMPedido,\n\t\tPrecioNeto,\n\t\tValorNetoPedido,\n\t\tCantidadBase,\n\t\tPorCalcular,\n\t\tPorEntregar,\n\t\tDescripcion,\n\t\tNombreProveedor,\n\t\tRFC,\n\t\tCalle,\n\t\tNumExt,\n\t\tNumInt,\n\t\tDistrito,\n\t\tCodigoPostal,\n\t\tPoblacion,\n\t\tPais,\n\t\tRegion,\n\t\tNota,\n\t\tCantidadSolPed,\n\t\tPrecioVal,\n\t\tValTotal,\n\t\tSolicitante = Select14@Solicitante,\n\t\tFechaSolPed,\n\t\tCreador,\n\t\tCenCos,\n\t\tCtaMayor,\n\t\tOrden,\n\t\tFecha,\n\t\tMoneda,\n\t\tMonedaDestino,\n\t\tTipoCambio,\n\t\tSolicitante = Select14@Solicitante,\n\t\tArea,\n\t\tFechaProceso = Select14@FechaProceso\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select16\nSelect15 derive(FechaProceso = $FechaDeCarga) ~> DerivedColumn4\nCompradores select(mapColumn(\n\t\tGrupo = EKGRP,\n\t\tNomGpo = EKNAM,\n\t\tFechaProceso\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> CompradoresFinal\nProveedores select(mapColumn(\n\t\tNumProveedor = LIFNR,\n\t\tNombreProveedor = NAME1,\n\t\tRFC = STCD1,\n\t\tCalle = STREET,\n\t\tNumExt = HOUSE_NUM1,\n\t\tNumInt = HOUSE_NUM2,\n\t\tDistrito = CITY2,\n\t\tCodigoPostal = POST_CODE1,\n\t\tPoblacion = CITY1,\n\t\tPais = COUNTRY,\n\t\tRegion = REGION,\n\t\tFechaProceso\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> ProveedoresFinal\nME2L select(mapColumn(\n\t\tPedido = EBELN,\n\t\tFechaDoc = EBDAT,\n\t\tGpoCompras = BKGRP,\n\t\tOrgCompras = EKORG,\n\t\tNumProv = ELIFN,\n\t\tMoneda = WAERS,\n\t\tTipoCompra = ZED_TIPO_COMPRAS,\n\t\tFechaUltLib,\n\t\tFechaProceso\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> ME2LFinal\nME5A select(mapColumn(\n\t\tSolPed = BANFN,\n\t\tPosicionSolPed = BNFPO,\n\t\tMaterial = MATNR,\n\t\tCantidadSolPed = BAMNG,\n\t\tPrecioVal = BAPRE,\n\t\tUMPedido = BAMEI,\n\t\tValTotal = RLWRT,\n\t\tMoneda = WAERS,\n\t\tSolicitante = AFNAM,\n\t\tOrgCompras = EKORG,\n\t\tFechaSolPed = BADAT,\n\t\tCreador = ERNAM,\n\t\tCantidadBase = EPEIN,\n\t\tFechaUltLib,\n\t\tFechaProceso\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> ME5AFinal\nTipoDeCambio select(mapColumn(\n\t\tFecha = GDATU,\n\t\tMonedaOrigen = FCURR,\n\t\tMonedaDestino = TCURRENCY,\n\t\tTipoCambio = UKURS,\n\t\tFechaProceso\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> TipoDeCambioFinal\nME2LDetalle select(mapColumn(\n\t\tPedido = EBELN,\n\t\tPosicion = EBELP,\n\t\tFechaEntrega = EINDT,\n\t\tMaterial = MATNR,\n\t\tTextoBreve = TXZ01,\n\t\tGpoArticulo = MATKL,\n\t\tCentro = EWERK,\n\t\tAlmacen = LGORT_D,\n\t\tSolPed = BANFN,\n\t\tPosicionSolPed = BNFPO,\n\t\tCantidadPedido = BSTMG,\n\t\tUMPedido = BSTME,\n\t\tPrecioNeto = BPREI,\n\t\tValorNetoPedido = BWERT,\n\t\tCantidadBase = EPEIN,\n\t\tPorCalcular = MGINV,\n\t\tPorEntregar = MGLIEF,\n\t\tFechaProceso\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> ME2LDetalleFinal\nImputacion select(mapColumn(\n\t\tSolPed = BANFN,\n\t\tPosicionSolPed = BNFPO,\n\t\tCenCos = KOSTL,\n\t\tCtaMayor = SAKTO,\n\t\tOrden = AUFNR\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> ImputacionFinal\nSelect13, ImputacionFinal join(Select13@SolPed == ImputacionFinal@SolPed\n\t&& Select13@PosicionSolPed == ImputacionFinal@PosicionSolPed,\n\tjoinType:'left',\n\tbroadcast: 'auto')~> Join16\nJoin16 select(mapColumn(\n\t\tPedido,\n\t\tPosicion,\n\t\tFechaDoc,\n\t\tGpoCompras,\n\t\tOrgCompras,\n\t\tNumProv,\n\t\tMoneda,\n\t\tTipoCompra,\n\t\tFechaUltLib,\n\t\tFechaProceso,\n\t\tNomGpo,\n\t\tFechaEntrega,\n\t\tMaterial,\n\t\tTextoBreve,\n\t\tCentro,\n\t\tAlmacen,\n\t\tGpoArticulo,\n\t\tSolPed = Select13@SolPed,\n\t\tPosicionSolPed = Select13@PosicionSolPed,\n\t\tCantidadPedido,\n\t\tUMPedido,\n\t\tPrecioNeto,\n\t\tValorNetoPedido,\n\t\tCantidadBase,\n\t\tPorCalcular,\n\t\tPorEntregar,\n\t\tDescripcion,\n\t\tNombreProveedor,\n\t\tRFC,\n\t\tCalle,\n\t\tNumExt,\n\t\tNumInt,\n\t\tDistrito,\n\t\tCodigoPostal,\n\t\tPoblacion,\n\t\tPais,\n\t\tRegion,\n\t\tNota,\n\t\tCantidadSolPed,\n\t\tPrecioVal,\n\t\tValTotal,\n\t\tSolicitante,\n\t\tFechaSolPed,\n\t\tCreador,\n\t\tSolPed = Select13@SolPed,\n\t\tPosicionSolPed = Select13@PosicionSolPed,\n\t\tCenCos,\n\t\tCtaMayor,\n\t\tOrden\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select17\nSelect16 derive(FechaUltLib = toDate('2022-02-27')) ~> hardcodeFechaultlib\nDerivedColumn4 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\trecreate:true,\n\tformat: 'table',\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\terrorHandlingOption: 'stopOnFirstError') ~> sink1"
+		}
+	}
+}

@@ -1,0 +1,33 @@
+{
+	"name": "Ds_Database_Infra_Sec",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Ls_AzureSql",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"secret_name": "KV-Database-Infra-Sec"
+			}
+		},
+		"parameters": {
+			"cw_schema": {
+				"type": "string"
+			},
+			"cw_table": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": {
+				"value": "@dataset().cw_schema",
+				"type": "Expression"
+			},
+			"table": {
+				"value": "@dataset().cw_table",
+				"type": "Expression"
+			}
+		}
+	}
+}

@@ -1,0 +1,474 @@
+{
+	"name": "infra_main",
+	"properties": {
+		"activities": [
+			{
+				"name": "top_process_batch",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Start Synapse",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "top_process_batch",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"src_name": {
+							"value": "@pipeline().parameters.src_name",
+							"type": "Expression"
+						},
+						"app_id": {
+							"value": "@pipeline().parameters.app_id",
+							"type": "Expression"
+						},
+						"src_schema_id_list": {
+							"value": "@pipeline().parameters.src_schema_id_list",
+							"type": "Expression"
+						},
+						"batch_id": {
+							"value": "@pipeline().parameters.batch_id",
+							"type": "Expression"
+						},
+						"job_name": {
+							"value": "@pipeline().parameters.job_name",
+							"type": "Expression"
+						},
+						"notebook_version": {
+							"value": "@pipeline().parameters.notebook_version",
+							"type": "Expression"
+						},
+						"project_name": {
+							"value": "@pipeline().parameters.project_name",
+							"type": "Expression"
+						},
+						"lock_name": {
+							"value": "@pipeline().parameters.lock_name",
+							"type": "Expression"
+						},
+						"dep_src_name": {
+							"value": "@pipeline().parameters.dep_src_name",
+							"type": "Expression"
+						},
+						"aas_schema_id": {
+							"value": "@pipeline().parameters.aas_schema_id",
+							"type": "Expression"
+						},
+						"notebook_path": {
+							"value": "@pipeline().parameters.notebook_path",
+							"type": "Expression"
+						},
+						"silver_src_env": {
+							"value": "@pipeline().parameters.silver_src_env",
+							"type": "Expression"
+						},
+						"health_check": {
+							"value": "@pipeline().parameters.health_check",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "utl_email_notificacion",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "top_process_batch",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "utl_email_notification",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"audit_schema": {
+							"value": "@pipeline().globalParameters.abc_db_schema",
+							"type": "Expression"
+						},
+						"src_schema_id": {
+							"value": "@pipeline().parameters.src_schema_id_list",
+							"type": "Expression"
+						},
+						"error_message": {
+							"value": "@activity('top_process_batch').Error.message",
+							"type": "Expression"
+						},
+						"calling_pipeline_name": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"pipeline_run_id": {
+							"value": "@pipeline().RunId",
+							"type": "Expression"
+						},
+						"project_name": {
+							"value": "@pipeline().parameters.project_name",
+							"type": "Expression"
+						},
+						"trigger_name": {
+							"value": "@pipeline().TriggerName",
+							"type": "Expression"
+						},
+						"factory_name": {
+							"value": "@pipeline().DataFactory",
+							"type": "Expression"
+						},
+						"stats_check": "0"
+					}
+				}
+			},
+			{
+				"name": "Set Run Type",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_type",
+					"value": {
+						"value": "@if(and(and(not(equals(pipeline().parameters.dw_schema_id,'0')),or(equals(pipeline().parameters.batch_id,'4'),equals(pipeline().parameters.batch_id,'5'))),not(contains(pipeline().globalParameters.no_synapse,pipeline().parameters.src_name))),'synapse_required','')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Start Synapse",
+				"type": "Switch",
+				"dependsOn": [
+					{
+						"activity": "Set Run Type",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@variables('run_type')",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "synapse_required",
+							"activities": [
+								{
+									"name": "AS_DW_START",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "utl_dw_start_stop",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"LOCK_NAME": {
+												"value": "@pipeline().parameters.lock_name",
+												"type": "Expression"
+											},
+											"DW_ACTION": "Start",
+											"AS_DW_SRC_SCHEMA": {
+												"value": "@pipeline().parameters.dw_schema_id",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "Need Teams Notification_1",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Start Synapse",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(pipeline().DataFactory,'infra-adf-prd')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "abc_infant_teams_1",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "utl_teams_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"RunId": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"ProjectName": {
+										"value": "@toUpper(pipeline().parameters.project_name)",
+										"type": "Expression"
+									},
+									"BatchRunId": {
+										"value": "@string(formatDateTime(utcnow(),'yyyyMMdd'))",
+										"type": "Expression"
+									},
+									"ErrorOrWarning": "Pipeline Failed",
+									"ErrorMessage": {
+										"value": "@string('Failure happened at pipeline run. Please check on monitor page')",
+										"type": "Expression"
+									},
+									"ObjId": "Multiple",
+									"CallingPipeline": {
+										"value": "@pipeline().TriggerName",
+										"type": "Expression"
+									},
+									"SourceName": {
+										"value": "@toUpper(pipeline().parameters.src_name)",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Failing abc_main as any within activity failure 1",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Need Teams Notification_1",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "intentional_error",
+					"value": {
+						"value": "@div(1,0)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Need Teams Notification",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "utl_email_notificacion",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(pipeline().DataFactory,'infra-adf-prd')",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "utl_teams_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "utl_teams_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"RunId": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"ProjectName": {
+										"value": "@toUpper(pipeline().parameters.project_name)",
+										"type": "Expression"
+									},
+									"BatchRunId": {
+										"value": "@string(formatDateTime(utcnow(),'yyyyMMdd'))",
+										"type": "Expression"
+									},
+									"ErrorOrWarning": "Pipeline Failed",
+									"ErrorMessage": {
+										"value": "@string('Failure happened at pipeline run. Please check on monitor page')",
+										"type": "Expression"
+									},
+									"ObjId": "Multiple",
+									"CallingPipeline": {
+										"value": "@pipeline().TriggerName",
+										"type": "Expression"
+									},
+									"SourceName": {
+										"value": "@toUpper(pipeline().parameters.src_name)",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Failing abc_main as any within activity failure",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Need Teams Notification",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "intentional_error",
+					"value": {
+						"value": "@div(1,0)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Stop Synapse",
+				"type": "Switch",
+				"dependsOn": [
+					{
+						"activity": "top_process_batch",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@variables('run_type')",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "synapse_required",
+							"activities": [
+								{
+									"name": "AS_DW_STOP",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "utl_dw_start_stop",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"LOCK_NAME": {
+												"value": "@pipeline().parameters.lock_name",
+												"type": "Expression"
+											},
+											"DW_ACTION": "Stop",
+											"AS_DW_SRC_SCHEMA": {
+												"value": "@pipeline().parameters.dw_schema_id",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"src_name": {
+				"type": "string"
+			},
+			"batch_id": {
+				"type": "string"
+			},
+			"job_name": {
+				"type": "string"
+			},
+			"src_schema_id_list": {
+				"type": "string"
+			},
+			"app_id": {
+				"type": "string"
+			},
+			"notebook_version": {
+				"type": "string"
+			},
+			"project_name": {
+				"type": "string"
+			},
+			"lock_name": {
+				"type": "string"
+			},
+			"dw_schema_id": {
+				"type": "string"
+			},
+			"dep_src_name": {
+				"type": "string"
+			},
+			"aas_schema_id": {
+				"type": "string"
+			},
+			"notebook_path": {
+				"type": "string"
+			},
+			"silver_src_env": {
+				"type": "string"
+			},
+			"health_check": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"dw_connection": {
+				"type": "String"
+			},
+			"run_type": {
+				"type": "String"
+			},
+			"intentional_error": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "00_Ingestion_Framework"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-12-09T07:59:06Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

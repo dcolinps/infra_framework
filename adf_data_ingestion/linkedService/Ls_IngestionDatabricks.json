@@ -1,0 +1,49 @@
+{
+	"name": "Ls_IngestionDatabricks",
+	"properties": {
+		"parameters": {
+			"cluster_version": {
+				"type": "string"
+			},
+			"worker_count": {
+				"type": "string"
+			},
+			"billing_name": {
+				"type": "string"
+			},
+			"pool_id": {
+				"type": "string"
+			}
+		},
+		"annotations": [
+			"Framework de Ingestion"
+		],
+		"type": "AzureDatabricks",
+		"typeProperties": {
+			"domain": "https://adb-4348208209437123.3.azuredatabricks.net",
+			"accessToken": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "Ls_AzureKeyVault",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "KV-ADB-Databricks-Token"
+			},
+			"instancePoolId": "@linkedService().pool_id",
+			"newClusterNumOfWorker": "@linkedService().worker_count",
+			"newClusterSparkConf": {
+				"spark.sql.legacy.parquet.datetimeRebaseModeInRead": "CORRECTED",
+				"spark.sql.legacy.parquet.datetimeRebaseModeInWrite": "CORRECTED",
+				"spark.sql.legacy.timeParserPolicy": "LEGACY",
+				"spark.databricks.delta.optimizeWrite.enabled": "true",
+				"spark.databricks.delta.autoCompact.enabled": "true"
+			},
+			"newClusterSparkEnvVars": {
+				"PYSPARK_PYTHON": "/databricks/python3/bin/python3"
+			},
+			"newClusterVersion": "@linkedService().cluster_version",
+			"newClusterInitScripts": [],
+			"clusterOption": "Fixed"
+		}
+	}
+}

@@ -1,0 +1,535 @@
+{
+	"name": "bottom_layer_int",
+	"properties": {
+		"activities": [
+			{
+				"name": "Lookup - OBJ_JOB_PARAMETERS",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Cluster_ID",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "select obj_job_parameters, load_type from @{pipeline().parameters.audit_schema}.OBJ_METADATA where obj_id = @{pipeline().parameters.obj_id}",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Get Parameter Array",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Lookup - OBJ_JOB_PARAMETERS",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "parameters",
+					"value": {
+						"value": "@split(activity('Lookup - OBJ_JOB_PARAMETERS').output.firstrow.OBJ_JOB_PARAMETERS, '|')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Run Integration Layer",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Lookup validation",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 1,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "/framework_ingestion/integration/@{pipeline().parameters.notebook_version}/@{pipeline().parameters.notebook_path}",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"obj_job_parameter": {
+							"value": "@activity('Lookup - OBJ_JOB_PARAMETERS').output.firstrow.OBJ_JOB_PARAMETERS",
+							"type": "Expression"
+						},
+						"load_type": {
+							"value": "@activity('Lookup - OBJ_JOB_PARAMETERS').output.firstrow.Load_Type",
+							"type": "Expression"
+						},
+						"batch_run_id": {
+							"value": "@pipeline().parameters.BATCH_RUN_ID",
+							"type": "Expression"
+						},
+						"silver_src_env": {
+							"value": "@pipeline().parameters.silver_src_env",
+							"type": "Expression"
+						},
+						"health_check": {
+							"value": "@if(equals(pipeline().parameters.health_check,Null),'',pipeline().parameters.health_check)",
+							"type": "Expression"
+						},
+						"validation_threshold": {
+							"value": "@activity('Lookup validation').output.firstrow.threshold",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Ls_IntegrationDatabricks",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"cluster_id": {
+							"value": "@activity('Cluster_ID').output.firstRow.cluster_id",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Set Dep Obj Count",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Get dep obj count",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "dep_obj_count",
+					"value": {
+						"value": "@string(activity('Get dep obj count').output.firstRow.OBJ_CNT)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Get dep obj count",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Get Parameter Array",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "select count(1) AS OBJ_CNT from @{pipeline().parameters.audit_schema}.OBJ_METADATA WHERE OBJ_ID IN (@{\t\nvariables('parameters')[0]})",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "utl_obj_dependency",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Set Dep Obj Count",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "utl_obj_dependency",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"batch_run_id": {
+							"value": "@pipeline().parameters.batch_run_id",
+							"type": "Expression"
+						},
+						"dep_obj_id_list": {
+							"value": "@variables('parameters')[0]",
+							"type": "Expression"
+						},
+						"app_id": {
+							"value": "@pipeline().parameters.app_id",
+							"type": "Expression"
+						},
+						"dep_obj_count": {
+							"value": "@int(variables('dep_obj_count'))",
+							"type": "Expression"
+						},
+						"audit_schema": {
+							"value": "@pipeline().parameters.audit_schema",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Cluster_ID",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[dbo].[sp_get_databricks_billing]",
+						"storedProcedureParameters": {
+							"DATAFACTORY_NAME": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().DataFactory",
+									"type": "Expression"
+								}
+							},
+							"PROJECT_NAME": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.project_name",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetBilling",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Teams Notification",
+				"type": "Switch",
+				"dependsOn": [
+					{
+						"activity": "Run Integration Layer",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@split(activity('Run Integration Layer').output.runOutput,',')[2]",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "error",
+							"activities": [
+								{
+									"name": "Notify Error Via Teams",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "utl_teams_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"RunId": {
+												"value": "@pipeline().RunId",
+												"type": "Expression"
+											},
+											"ProjectName": {
+												"value": "@pipeline().parameters.project_name",
+												"type": "Expression"
+											},
+											"BatchRunId": {
+												"value": "@pipeline().parameters.batch_run_id",
+												"type": "Expression"
+											},
+											"ErrorOrWarning": {
+												"value": "@activity('Run Integration Layer').output",
+												"type": "Expression"
+											},
+											"ErrorMessage": "Health Check Failed",
+											"ObjId": {
+												"value": "@pipeline().parameters.obj_id",
+												"type": "Expression"
+											},
+											"CallingPipeline": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "Failing abc_main as any within activity failure",
+									"type": "SetVariable",
+									"dependsOn": [
+										{
+											"activity": "Notify Error Via Teams",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "throwerror",
+										"value": {
+											"value": "@div(1,0)",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "warning",
+							"activities": [
+								{
+									"name": "Notify Warning Via Teams_copy1",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "utl_teams_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"RunId": {
+												"value": "@pipeline().RunId",
+												"type": "Expression"
+											},
+											"ProjectName": {
+												"value": "@pipeline().parameters.project_name",
+												"type": "Expression"
+											},
+											"BatchRunId": {
+												"value": "@pipeline().parameters.batch_run_id",
+												"type": "Expression"
+											},
+											"ErrorOrWarning": {
+												"value": "@activity('Run Integration Layer').output",
+												"type": "Expression"
+											},
+											"ErrorMessage": "'Health Check Failed'",
+											"ObjId": {
+												"value": "@pipeline().parameters.obj_id",
+												"type": "Expression"
+											},
+											"CallingPipeline": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "Lookup validation",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "utl_obj_dependency",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT CAST(CASE WHEN error_threshold IS NULL THEN 0 ELSE error_threshold END AS varchar(3)) threshold FROM obj_metadata WHERE obj_id=@{pipeline().parameters.obj_id}",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetsetMetadata",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Update Count Required",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Run Integration Layer",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@not(equals(concat(split(activity('Run Integration Layer').output.runOutput,',')[0],split(activity('Run Integration Layer').output.runOutput,',')[1]),'00'))",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Update Row Count",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "UPDATE @{pipeline().parameters.audit_schema}.OBJ_RUN_STATS \nSET SOURCE_COUNT=@{split(activity('Run Integration Layer').output.runOutput,',')[0]},\nTARGET_COUNT =@{split(activity('Run Integration Layer').output.runOutput,',')[1]}\nWHERE JOB_RUN_ID=@{pipeline().parameters.job_run_id}\nAND OBJ_ID=@{pipeline().parameters.obj_id}\nAND OBJ_RUN_ID=@{pipeline().parameters.obj_run_id};\n\nSELECT 'row updated';",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "Ds_GetsetMetadata",
+									"type": "DatasetReference"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"src_name": {
+				"type": "string"
+			},
+			"obj_id": {
+				"type": "string"
+			},
+			"audit_schema": {
+				"type": "string"
+			},
+			"notebook_version": {
+				"type": "string"
+			},
+			"batch_run_id": {
+				"type": "string"
+			},
+			"app_id": {
+				"type": "string"
+			},
+			"project_name": {
+				"type": "string"
+			},
+			"notebook_path": {
+				"type": "string"
+			},
+			"silver_src_env": {
+				"type": "string"
+			},
+			"health_check": {
+				"type": "string"
+			},
+			"job_run_id": {
+				"type": "string"
+			},
+			"obj_run_id": {
+				"type": "string"
+			},
+			"src_schema_id": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"parameters": {
+				"type": "Array"
+			},
+			"dep_obj_count": {
+				"type": "String"
+			},
+			"throwerror": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "00_Ingestion_Framework/02_Bottom"
+		},
+		"annotations": [],
+		"lastPublishTime": "2020-10-08T10:22:15Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

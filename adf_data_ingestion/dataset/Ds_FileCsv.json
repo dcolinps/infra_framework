@@ -1,0 +1,62 @@
+{
+	"name": "Ds_FileCsv",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Ls_AzureDeltaLake",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"staging_path": {
+				"type": "string"
+			},
+			"column_delimiter": {
+				"type": "string"
+			},
+			"obj_name": {
+				"type": "string"
+			},
+			"escape_char": {
+				"type": "string"
+			},
+			"quote_char": {
+				"type": "string"
+			},
+			"encoding": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Ingestion"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": {
+					"value": "@concat(dataset().staging_path,'/',dataset().obj_name)",
+					"type": "Expression"
+				},
+				"fileSystem": "data"
+			},
+			"columnDelimiter": {
+				"value": "@{if(equals(dataset().column_delimiter,'tab'),'\t',dataset().column_delimiter)}",
+				"type": "Expression"
+			},
+			"encodingName": {
+				"value": "@trim(dataset().encoding)",
+				"type": "Expression"
+			},
+			"escapeChar": {
+				"value": "@trim(dataset().escape_char)",
+				"type": "Expression"
+			},
+			"firstRowAsHeader": true,
+			"quoteChar": {
+				"value": "@trim(dataset().quote_char)",
+				"type": "Expression"
+			}
+		},
+		"schema": []
+	}
+}

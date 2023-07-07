@@ -1,0 +1,12 @@
+{
+	"name": "Ls_AzureKeyVault",
+	"properties": {
+		"annotations": [
+			"Framework de Ingestion"
+		],
+		"type": "AzureKeyVault",
+		"typeProperties": {
+			"baseUrl": "https://akv-infra-bi-dev.vault.azure.net/"
+		}
+	}
+}

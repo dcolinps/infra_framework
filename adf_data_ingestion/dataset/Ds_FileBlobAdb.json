@@ -1,0 +1,41 @@
+{
+	"name": "Ds_FileBlobAdb",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Ls_AzureDeltaLake",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"file_name": {
+				"type": "string"
+			},
+			"usuario_name": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@concat(dataset().file_name,'.zip')",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@concat('ConsultasEspecificas/Files/',dataset().usuario_name,'/')",
+					"type": "Expression"
+				},
+				"fileSystem": "output"
+			},
+			"columnDelimiter": ",",
+			"compressionCodec": "ZipDeflate",
+			"compressionLevel": "Optimal",
+			"encodingName": "UTF-8",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	}
+}

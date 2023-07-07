@@ -1,0 +1,33 @@
+{
+	"name": "Ds_Database_InfraIMSS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Ls_SqlServerDb",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"secret_name": "KV-Database-Infra-Imss"
+			}
+		},
+		"parameters": {
+			"cw_schema": {
+				"type": "string"
+			},
+			"cw_table": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": {
+				"value": "@dataset().cw_schema",
+				"type": "Expression"
+			},
+			"table": {
+				"value": "@dataset().cw_table",
+				"type": "Expression"
+			}
+		}
+	}
+}

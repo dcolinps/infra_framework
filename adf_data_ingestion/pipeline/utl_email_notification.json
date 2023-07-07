@@ -1,0 +1,457 @@
+{
+	"name": "utl_email_notification",
+	"properties": {
+		"activities": [
+			{
+				"name": "GetEmail",
+				"description": "ABC Infant pipeline",
+				"type": "IfCondition",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(pipeline().parameters.stats_check,'9')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Get Email Parts",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 2,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderStoredProcedureName": {
+										"value": "@{pipeline().parameters.audit_schema}.[GET_ALERT_EMAIL_DETAILS]",
+										"type": "Expression"
+									},
+									"storedProcedureParameters": {
+										"AUDIT_SCHEMA": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.audit_schema",
+												"type": "Expression"
+											}
+										},
+										"BATCH_RUN_ID": {
+											"type": "Decimal",
+											"value": {
+												"value": "@pipeline().parameters.batch_run_id",
+												"type": "Expression"
+											}
+										},
+										"CALLING_PIPELINE_NAME": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.calling_pipeline_name",
+												"type": "Expression"
+											}
+										},
+										"ERROR_MESSAGE": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.error_message",
+												"type": "Expression"
+											}
+										},
+										"PIPELINE_RUN_ID": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.pipeline_run_id",
+												"type": "Expression"
+											}
+										},
+										"PROJECT_NAME": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.project_name",
+												"type": "Expression"
+											}
+										},
+										"SRC_ID": {
+											"type": "Int32",
+											"value": {
+												"value": "@pipeline().parameters.src_id",
+												"type": "Expression"
+											}
+										},
+										"SRC_SCHEMA_ID": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.src_schema_id",
+												"type": "Expression"
+											}
+										},
+										"TRIGGER_NAME": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.trigger_name",
+												"type": "Expression"
+											}
+										},
+										"FACTORY_NAME": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().DataFactory",
+												"type": "Expression"
+											}
+										},
+										"JOB_NAME": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.job_name",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "Ds_GetsetMetadata",
+									"type": "DatasetReference"
+								},
+								"firstRowOnly": true
+							}
+						},
+						{
+							"name": "infant Details",
+							"description": "check the stat details and input stats check parameter",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Get Email Parts",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "Message_Switch",
+								"value": {
+									"value": "@IF(and(equals(pipeline().parameters.stats_check,'0'),\n\t\tand(empty(activity('Get Email Parts').output.firstRow.emailRecipients),\n\t\t   and(empty(activity('Get Email Parts').output.firstRow.emailCcRecipients),\n\t\t\t   empty(activity('Get Email Parts').output.firstRow.emailBccRecipients)))),\n\t'Default','Infant')",
+									"type": "Expression"
+								}
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Get Email Parts success",
+							"description": "Get email parts for success notification email",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 2,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderStoredProcedureName": {
+										"value": "@{pipeline().parameters.audit_schema}.[GET_EMAIL_STATS]",
+										"type": "Expression"
+									},
+									"storedProcedureParameters": {
+										"AUDIT_SCHEMA": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.audit_schema",
+												"type": "Expression"
+											}
+										},
+										"BATCH_RUN_ID": {
+											"type": "Decimal",
+											"value": {
+												"value": "@pipeline().parameters.batch_run_id",
+												"type": "Expression"
+											}
+										},
+										"CALLING_PIPELINE_NAME": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.calling_pipeline_name",
+												"type": "Expression"
+											}
+										},
+										"ERROR_MESSAGE": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.error_message",
+												"type": "Expression"
+											}
+										},
+										"PIPELINE_RUN_ID": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.pipeline_run_id",
+												"type": "Expression"
+											}
+										},
+										"PROJECT_NAME": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.project_name",
+												"type": "Expression"
+											}
+										},
+										"SRC_ID": {
+											"type": "Int32",
+											"value": {
+												"value": "@pipeline().parameters.src_id",
+												"type": "Expression"
+											}
+										},
+										"SRC_SCHEMA_ID": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.src_schema_id",
+												"type": "Expression"
+											}
+										},
+										"TRIGGER_NAME": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.trigger_name",
+												"type": "Expression"
+											}
+										},
+										"FACTORY_NAME": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().DataFactory",
+												"type": "Expression"
+											}
+										},
+										"JOB_NAME": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.job_name",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "Ds_GetsetMetadata",
+									"type": "DatasetReference"
+								},
+								"firstRowOnly": true
+							}
+						},
+						{
+							"name": "Stats Details",
+							"description": "check the stat details and input stats check parameter",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Get Email Parts success",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "Message_Switch",
+								"value": {
+									"value": "@if(and(equals(pipeline().parameters.stats_check,'9'),\n\tand(empty(activity('Get Email Parts success').output.firstRow.emailRecipients),\n\t\t   and(empty(activity('Get Email Parts success').output.firstRow.emailCcRecipients),\n\t\t\t   empty(activity('Get Email Parts success').output.firstRow.emailBccRecipients)))),\n\t'Default','Stats')",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Switch1",
+				"type": "Switch",
+				"dependsOn": [
+					{
+						"activity": "GetEmail",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@variables('Message_Switch')",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "Stats",
+							"activities": [
+								{
+									"name": "Wait To Ensure Success_copy1",
+									"description": "When Azure Function Fail, wait 1 second to make job success",
+									"type": "Wait",
+									"dependsOn": [
+										{
+											"activity": "Send Email",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"waitTimeInSeconds": 1
+									}
+								},
+								{
+									"name": "Send Email",
+									"type": "WebActivity",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": "https://prod-14.southcentralus.logic.azure.com:443/workflows/519960485af14111a79b63b5488d1fa8/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Bui5VmWdZ8z-HwQYOzZyOMzwOSaGBfxGyhoTXp0k9N4",
+										"method": "POST",
+										"body": {
+											"value": "{\n\t\"emailBccRecipients\":\"@{activity('Get Email Parts success').output.firstRow.emailBccRecipients}\",\n\t\"emailBody\":\"@{activity('Get Email Parts success').output.firstRow.emailBody}\",\n\t\"emailCcRecipients\":\"@{activity('Get Email Parts success').output.firstRow.emailCcRecipients}\",\n\t\"emailImportance\":\"@{activity('Get Email Parts success').output.firstRow.emailImportance}\",\n\t\"emailRecipients\":\"@{activity('Get Email Parts success').output.firstRow.emailRecipients}\",\n\t\"emailSubject\":\"@{activity('Get Email Parts success').output.firstRow.emailSubject}\"\n}",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "Infant",
+							"activities": [
+								{
+									"name": "Wait To Ensure Success",
+									"description": "When Azure Function Fail, wait 1 second to make job success",
+									"type": "Wait",
+									"dependsOn": [
+										{
+											"activity": "Send Email_copy1",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"waitTimeInSeconds": 1
+									}
+								},
+								{
+									"name": "Send Email_copy1",
+									"type": "WebActivity",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": "https://prod-14.southcentralus.logic.azure.com:443/workflows/519960485af14111a79b63b5488d1fa8/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Bui5VmWdZ8z-HwQYOzZyOMzwOSaGBfxGyhoTXp0k9N4",
+										"method": "POST",
+										"body": {
+											"value": "{\n\t\"emailBccRecipients\":\"@{activity('Get Email Parts').output.firstRow.emailBccRecipients}\",\n\t\"emailBody\":\"@{activity('Get Email Parts').output.firstRow.emailBody}\",\n\t\"emailCcRecipients\":\"@{activity('Get Email Parts').output.firstRow.emailCcRecipients}\",\n\t\"emailImportance\":\"@{activity('Get Email Parts').output.firstRow.emailImportance}\",\n\t\"emailRecipients\":\"@{activity('Get Email Parts').output.firstRow.emailRecipients}\",\n\t\"emailSubject\":\"@{activity('Get Email Parts').output.firstRow.emailSubject}\"\n}",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					],
+					"defaultActivities": [
+						{
+							"name": "No Recipients",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "Error Message",
+								"value": "No recipient found"
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"audit_schema": {
+				"type": "string"
+			},
+			"batch_run_id": {
+				"type": "string"
+			},
+			"src_schema_id": {
+				"type": "string"
+			},
+			"src_id": {
+				"type": "string"
+			},
+			"error_message": {
+				"type": "string"
+			},
+			"calling_pipeline_name": {
+				"type": "string"
+			},
+			"pipeline_run_id": {
+				"type": "string"
+			},
+			"project_name": {
+				"type": "string"
+			},
+			"trigger_name": {
+				"type": "string"
+			},
+			"factory_name": {
+				"type": "string"
+			},
+			"job_name": {
+				"type": "string"
+			},
+			"stats_check": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"Error Message": {
+				"type": "String"
+			},
+			"Message_Switch": {
+				"type": "String"
+			},
+			"Message_Output": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "00_Ingestion_Framework/00_Utilities"
+		},
+		"annotations": [],
+		"lastPublishTime": "2020-10-08T08:06:13Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

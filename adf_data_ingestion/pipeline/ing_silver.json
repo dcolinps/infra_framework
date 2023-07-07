@@ -1,0 +1,384 @@
+{
+	"name": "ing_silver",
+	"properties": {
+		"activities": [
+			{
+				"name": "PPG_Billing Name",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "dbo.sp_get_databricks_billing",
+						"storedProcedureParameters": {
+							"DATAFACTORY_NAME": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().DataFactory",
+									"type": "Expression"
+								}
+							},
+							"PROJECT_NAME": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.project_name",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "Ds_GetBilling",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "Switch based on Load Type",
+				"type": "Switch",
+				"dependsOn": [
+					{
+						"activity": "Set load_type",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@variables('load_type')",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "F",
+							"activities": [
+								{
+									"name": "F -Run Silver Full Notebook",
+									"type": "DatabricksNotebook",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 1,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"notebookPath": {
+											"value": "/framework_ingestion/silver/@{pipeline().parameters.notebook_version}/silver_full",
+											"type": "Expression"
+										},
+										"baseParameters": {
+											"db_name": {
+												"value": "@pipeline().parameters.db_name",
+												"type": "Expression"
+											},
+											"tbl_name": {
+												"value": "@pipeline().parameters.tbl_name",
+												"type": "Expression"
+											},
+											"src_path": {
+												"value": "@pipeline().parameters.src_path",
+												"type": "Expression"
+											},
+											"tgt_path": {
+												"value": "@pipeline().parameters.tgt_path",
+												"type": "Expression"
+											},
+											"partition_command": {
+												"value": "@if(or(equals(pipeline().parameters.partition_column,''),empty(pipeline().parameters.partition_column)),'','PARTITIONED BY(''@{pipeline().parameters.partition_column})''')",
+												"type": "Expression"
+											},
+											"composite_key_list": {
+												"value": "@if(equals(pipeline().parameters.composite_key_list,Null),'',pipeline().parameters.composite_key_list)",
+												"type": "Expression"
+											},
+											"partition_column": {
+												"value": "@if(equals(pipeline().parameters.partition_column,Null),'',pipeline().parameters.partition_column)",
+												"type": "Expression"
+											},
+											"obj_job_parameters": {
+												"value": "@pipeline().parameters.obj_job_parameters",
+												"type": "Expression"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "Ls_IngestionDatabricks",
+										"type": "LinkedServiceReference",
+										"parameters": {
+											"cluster_version": {
+												"value": "@activity('PPG_Billing Name').output.firstRow.cluster_version",
+												"type": "Expression"
+											},
+											"worker_count": "1",
+											"billing_name": {
+												"value": "@activity('PPG_Billing Name').output.firstRow.billing_name",
+												"type": "Expression"
+											},
+											"pool_id": {
+												"value": "@activity('PPG_Billing Name').output.firstRow.pool_id",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "I",
+							"activities": [
+								{
+									"name": "I -Run Silver Incremental Notebook",
+									"type": "DatabricksNotebook",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 1,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"notebookPath": {
+											"value": "/framework_ingestion/silver/@{pipeline().parameters.notebook_version}/silver_incr",
+											"type": "Expression"
+										},
+										"baseParameters": {
+											"db_name": {
+												"value": "@pipeline().parameters.db_name",
+												"type": "Expression"
+											},
+											"tbl_name": {
+												"value": "@pipeline().parameters.tbl_name",
+												"type": "Expression"
+											},
+											"src_path": {
+												"value": "@pipeline().parameters.src_path",
+												"type": "Expression"
+											},
+											"tgt_path": {
+												"value": "@pipeline().parameters.tgt_path",
+												"type": "Expression"
+											},
+											"join_condition": {
+												"value": "@if(equals(pipeline().parameters.join_condition,Null),'',pipeline().parameters.join_condition)",
+												"type": "Expression"
+											},
+											"composite_key_list": {
+												"value": "@if(equals(pipeline().parameters.composite_key_list,Null),'',pipeline().parameters.composite_key_list)",
+												"type": "Expression"
+											},
+											"partition_column": {
+												"value": "@if(equals(pipeline().parameters.partition_column,Null),'',pipeline().parameters.partition_column)",
+												"type": "Expression"
+											},
+											"obj_job_parameters": {
+												"value": "@pipeline().parameters.obj_job_parameters",
+												"type": "Expression"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "Ls_IngestionDatabricks",
+										"type": "LinkedServiceReference",
+										"parameters": {
+											"cluster_version": {
+												"value": "@activity('PPG_Billing Name').output.firstRow.cluster_version",
+												"type": "Expression"
+											},
+											"worker_count": "2:4",
+											"billing_name": {
+												"value": "@activity('PPG_Billing Name').output.firstRow.billing_name",
+												"type": "Expression"
+											},
+											"pool_id": {
+												"value": "@activity('PPG_Billing Name').output.firstRow.pool_id",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "A",
+							"activities": [
+								{
+									"name": "A -Run Silver Append Notebook",
+									"type": "DatabricksNotebook",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 1,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"notebookPath": {
+											"value": "/framework_ingestion/silver/@{pipeline().parameters.notebook_version}/silver_append",
+											"type": "Expression"
+										},
+										"baseParameters": {
+											"db_name": {
+												"value": "@pipeline().parameters.db_name",
+												"type": "Expression"
+											},
+											"tbl_name": {
+												"value": "@pipeline().parameters.tbl_name",
+												"type": "Expression"
+											},
+											"src_path": {
+												"value": "@pipeline().parameters.src_path",
+												"type": "Expression"
+											},
+											"tgt_path": {
+												"value": "@pipeline().parameters.tgt_path",
+												"type": "Expression"
+											},
+											"partition_column": {
+												"value": "@if(equals(pipeline().parameters.partition_column,Null),'',pipeline().parameters.partition_column)",
+												"type": "Expression"
+											},
+											"incr_col_filt1": {
+												"value": "@pipeline().parameters.incr_col_filt1",
+												"type": "Expression"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "Ls_IngestionDatabricks",
+										"type": "LinkedServiceReference",
+										"parameters": {
+											"cluster_version": {
+												"value": "@activity('PPG_Billing Name').output.firstRow.cluster_version",
+												"type": "Expression"
+											},
+											"worker_count": "2:4",
+											"billing_name": {
+												"value": "@activity('PPG_Billing Name').output.firstRow.billing_name",
+												"type": "Expression"
+											},
+											"pool_id": {
+												"value": "@activity('PPG_Billing Name').output.firstRow.pool_id",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						}
+					],
+					"defaultActivities": [
+						{
+							"name": "Error Throw from Switch",
+							"description": "Throwing Error when load_type is not 'I' or 'F'",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "error",
+								"value": {
+									"value": "@div(1,0)",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Set load_type",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "PPG_Billing Name",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "load_type",
+					"value": {
+						"value": "@if(equals(pipeline().parameters.load_type,'F'),'F',\nif(equals(pipeline().parameters.composite_key_list,Null),'A',\nif(equals(pipeline().parameters.composite_key_list,''),'A','I')))",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"project_name": {
+				"type": "string"
+			},
+			"load_type": {
+				"type": "string"
+			},
+			"notebook_version": {
+				"type": "string"
+			},
+			"db_name": {
+				"type": "string"
+			},
+			"tbl_name": {
+				"type": "string"
+			},
+			"src_path": {
+				"type": "string"
+			},
+			"tgt_path": {
+				"type": "string"
+			},
+			"join_condition": {
+				"type": "string"
+			},
+			"composite_key_list": {
+				"type": "string"
+			},
+			"partition_command": {
+				"type": "string"
+			},
+			"partition_column": {
+				"type": "string"
+			},
+			"obj_job_parameters": {
+				"type": "string"
+			},
+			"incr_col_filt1": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"error": {
+				"type": "String"
+			},
+			"load_type": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "00_Ingestion_Framework/01_ingestion"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-12-09T07:58:59Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

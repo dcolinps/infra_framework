@@ -1,0 +1,10 @@
+{
+	"name": "Ls_AzureDataLakeExplotacionBD",
+	"properties": {
+		"annotations": [],
+		"type": "AzureBlobFS",
+		"typeProperties": {
+			"url": "https://explotacionbd.dfs.core.windows.net/"
+		}
+	}
+}

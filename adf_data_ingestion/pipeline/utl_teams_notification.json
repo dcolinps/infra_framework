@@ -1,0 +1,67 @@
+{
+	"name": "utl_teams_notification",
+	"properties": {
+		"description": "This pipeline sends notifications via Teams",
+		"activities": [
+			{
+				"name": "Web1",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "https://infosapiens.webhook.office.com/webhookb2/60d578a3-3226-42cb-9d16-1608c2f42133@edbda151-034d-466f-bdb6-c6e02b1a38a1/IncomingWebhook/77364193829e43c4ba46c1d07c56f37b/3cdcc413-3be1-435c-9945-f1d70670042e",
+						"type": "Expression"
+					},
+					"method": "POST",
+					"body": {
+						"value": "@concat('{\n    \"','@','type\": \"MessageCard\",\n    \"','@','context\": \"https://schema.org/extensions\",\n    \"summary\": \"Issue 176715375\",\n    \"themeColor\": \"eb3434\",\n    \"title\": \"Infra DataFactory notification alert!\",\n    \"sections\": [\n        {\n            \"activityTitle\": \"Pipeline failed\",\n            \"activitySubtitle\": \"UTC: ', utcnow() ,'\",\n            \"activityImage\": \"https://icons.iconarchive.com/icons/paomedia/small-n-flat/256/sign-error-icon.png\",\n            \"facts\": [\n                {\n                    \"name\": \"Data Factory:\",\n                    \"value\": \"**', pipeline().DataFactory,'**\"\n                },\n                {\n                    \"name\": \"Project Name:\",\n                    \"value\": \"**', pipeline().parameters.ProjectName,'**\"\n                },\n                {\n                    \"name\": \"Source Name:\",\n                    \"value\": \"**', pipeline().parameters.SourceName,'**\"\n                },\n                {  \n                    \"name\": \"Batch Number\",\n                    \"value\": \"**',pipeline().parameters.BatchRunId,'**\"\n                },\n                {\n                    \"name\": \"Object ID:\",\n                    \"value\": \"**',pipeline().parameters.ObjId,'**\"\n                },\n                {\n                    \"name\": \"Run ID\",\n                    \"value\": \"**', pipeline().RunId,'**\"\n                },\n                {\n                    \"name\": \"Error / Warning\",\n                    \"value\": \"**', pipeline().parameters.ErrorOrWarning,'**\"\n                },\n                {\n                    \"name\": \"Message:\",\n                    \"value\": \"**', pipeline().parameters.ErrorMessage,'**\"\n                }\n            ],\n            \"text\": \"Error in inner pipeline: \"\n        }\n    ],\n    \"potentialAction\": [\n        {\n            \"@type\": \"OpenUri\",\n            \"name\": \"Go to Pipeline Run\",\n            \"targets\": [\n                {\n                    \"os\": \"default\",\n                    \"uri\": \"https://adf.azure.com/en-us/monitoring/pipelineruns/', pipeline().RunId,'?factory=%2Fsubscriptions%812eb6fd-0368-4bc3-8569-068fa63a6e7b%2FresourceGroups%2FRG-Infra-BI-Dev%2Fproviders%2FMicrosoft.DataFactory%2Ffactories%2F',pipeline().DataFactory,'\"\n                }\n            ]\n        }\n    ]\n}')",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"RunId": {
+				"type": "string"
+			},
+			"ProjectName": {
+				"type": "string"
+			},
+			"BatchRunId": {
+				"type": "string"
+			},
+			"ErrorOrWarning": {
+				"type": "string"
+			},
+			"ErrorMessage": {
+				"type": "string"
+			},
+			"ObjId": {
+				"type": "string"
+			},
+			"Threshold": {
+				"type": "string"
+			},
+			"CallingPipeline": {
+				"type": "string"
+			},
+			"SourceName": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "00_Ingestion_Framework/00_Utilities"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-12-09T07:58:56Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

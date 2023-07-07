@@ -1,0 +1,62 @@
+{
+	"name": "tgr_gold_infra_load_hist",
+	"properties": {
+		"annotations": [
+			"Procesamiento de Información Histórica del SEC a Gold"
+		],
+		"runtimeState": "Started",
+		"pipeline": {
+			"pipelineReference": {
+				"referenceName": "infra_main",
+				"type": "PipelineReference"
+			},
+			"parameters": {
+				"src_name": "infra_bi_sec_hist",
+				"batch_id": "3",
+				"job_name": "m_silver_gold",
+				"src_schema_id_list": "90001",
+				"app_id": "0",
+				"notebook_version": "1.0",
+				"project_name": "cloud_sec",
+				"lock_name": "0",
+				"dw_schema_id": "0",
+				"dep_src_name": "infra_hist",
+				"aas_schema_id": "0",
+				"notebook_path": "integration_layer",
+				"silver_src_env": "0",
+				"health_check": "0"
+			}
+		},
+		"type": "TumblingWindowTrigger",
+		"typeProperties": {
+			"frequency": "Hour",
+			"interval": 24,
+			"startTime": "2022-11-04T10:00:00Z",
+			"delay": "00:00:00",
+			"maxConcurrency": 50,
+			"retryPolicy": {
+				"intervalInSeconds": 30
+			},
+			"dependsOn": [
+				{
+					"type": "TumblingWindowTriggerDependencyReference",
+					"size": "0.04:00:00",
+					"offset": "0.00:00:00",
+					"referenceTrigger": {
+						"referenceName": "tgr_ing_infra_sec_hist",
+						"type": "TriggerReference"
+					}
+				},
+				{
+					"type": "TumblingWindowTriggerDependencyReference",
+					"size": "0.04:00:00",
+					"offset": "0.00:00:00",
+					"referenceTrigger": {
+						"referenceName": "tgr_ing_infra_correo",
+						"type": "TriggerReference"
+					}
+				}
+			]
+		}
+	}
+}

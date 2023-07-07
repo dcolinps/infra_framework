@@ -1,0 +1,292 @@
+{
+	"name": "harddelete_switch",
+	"properties": {
+		"activities": [
+			{
+				"name": "Switch based on SRC_DB_TYPE",
+				"type": "Switch",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@pipeline().parameters.src_db_type",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "oracle",
+							"activities": [
+								{
+									"name": "harddelete_bronze_oracle",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "harddelete_bronze_oracle",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"schema_name": {
+												"value": "@pipeline().parameters.schema_name",
+												"type": "Expression"
+											},
+											"obj_name": {
+												"value": "@pipeline().parameters.obj_name",
+												"type": "Expression"
+											},
+											"harddelete_select_stmt": {
+												"value": "@pipeline().parameters.harddelete_select_stmt",
+												"type": "Expression"
+											},
+											"split_by_col": {
+												"value": "@pipeline().parameters.split_by_col",
+												"type": "Expression"
+											},
+											"conn_vault_name": {
+												"value": "@pipeline().parameters.conn_vault_name",
+												"type": "Expression"
+											},
+											"harddelete_file_path": {
+												"value": "@pipeline().parameters.harddelete_file_path",
+												"type": "Expression"
+											},
+											"load_type": {
+												"value": "@pipeline().parameters.load_type",
+												"type": "Expression"
+											},
+											"mappers": {
+												"value": "@pipeline().parameters.mappers",
+												"type": "Expression"
+											},
+											"hard_delete_incr_cond": {
+												"value": "@pipeline().parameters.hard_delete_incr_cond",
+												"type": "Expression"
+											},
+											"src_name": {
+												"value": "@pipeline().parameters.src_name",
+												"type": "Expression"
+											},
+											"db_name": {
+												"value": "@pipeline().parameters.db_name",
+												"type": "Expression"
+											},
+											"cmpst_key": {
+												"value": "@pipeline().parameters.cmpst_key",
+												"type": "Expression"
+											},
+											"cmpst_join_sql": {
+												"value": "@pipeline().parameters.cmpst_join_sql",
+												"type": "Expression"
+											},
+											"databricks_incr_cond": {
+												"value": "@pipeline().parameters.databricks_incr_cond",
+												"type": "Expression"
+											},
+											"notebook_version": {
+												"value": "@pipeline().parameters.notebook_version",
+												"type": "Expression"
+											},
+											"project_name": {
+												"value": "@pipeline().parameters.project_name",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "sql server",
+							"activities": [
+								{
+									"name": "harddelete_bronze_sqlserver",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "harddelete_bronze_sqlserver",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"schema_name": {
+												"value": "@pipeline().parameters.schema_name",
+												"type": "Expression"
+											},
+											"obj_name": {
+												"value": "@pipeline().parameters.obj_name",
+												"type": "Expression"
+											},
+											"harddelete_select_stmt": {
+												"value": "@pipeline().parameters.harddelete_select_stmt",
+												"type": "Expression"
+											},
+											"split_by_col": {
+												"value": "@pipeline().parameters.split_by_col",
+												"type": "Expression"
+											},
+											"conn_vault_name": {
+												"value": "@pipeline().parameters.conn_vault_name",
+												"type": "Expression"
+											},
+											"harddelete_file_path": {
+												"value": "@pipeline().parameters.harddelete_file_path",
+												"type": "Expression"
+											},
+											"load_type": {
+												"value": "@pipeline().parameters.load_type",
+												"type": "Expression"
+											},
+											"mappers": {
+												"value": "@pipeline().parameters.mappers",
+												"type": "Expression"
+											},
+											"hard_delete_incr_cond": {
+												"value": "@pipeline().parameters.hard_delete_incr_cond",
+												"type": "Expression"
+											},
+											"src_name": {
+												"value": "@pipeline().parameters.src_name",
+												"type": "Expression"
+											},
+											"db_name": {
+												"value": "@pipeline().parameters.db_name",
+												"type": "Expression"
+											},
+											"cmpst_key": {
+												"value": "@pipeline().parameters.cmpst_key",
+												"type": "Expression"
+											},
+											"cmpst_join_sql": {
+												"value": "@pipeline().parameters.cmpst_join_sql",
+												"type": "Expression"
+											},
+											"databricks_incr_cond": {
+												"value": "@pipeline().parameters.databricks_incr_cond",
+												"type": "Expression"
+											},
+											"notebook_version": {
+												"value": "@pipeline().parameters.notebook_version",
+												"type": "Expression"
+											},
+											"project_name": {
+												"value": "@pipeline().parameters.project_name",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						}
+					],
+					"defaultActivities": [
+						{
+							"name": "SRC_DB_TYPE not found",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "error_throw",
+								"value": {
+									"value": "@div(1,0)",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"src_db_type": {
+				"type": "string"
+			},
+			"schema_name": {
+				"type": "string"
+			},
+			"obj_name": {
+				"type": "string"
+			},
+			"harddelete_select_stmt": {
+				"type": "string"
+			},
+			"split_by_col": {
+				"type": "string"
+			},
+			"conn_vault_name": {
+				"type": "string"
+			},
+			"harddelete_file_path": {
+				"type": "string"
+			},
+			"load_type": {
+				"type": "string"
+			},
+			"mappers": {
+				"type": "string"
+			},
+			"hard_delete_incr_cond": {
+				"type": "string"
+			},
+			"src_name": {
+				"type": "string"
+			},
+			"db_name": {
+				"type": "string"
+			},
+			"cmpst_key": {
+				"type": "string"
+			},
+			"cmpst_join_sql": {
+				"type": "string"
+			},
+			"databricks_incr_cond": {
+				"type": "string"
+			},
+			"notebook_version": {
+				"type": "string"
+			},
+			"project_name": {
+				"type": "string"
+			},
+			"top_param_value": {
+				"type": "string"
+			},
+			"page_size": {
+				"type": "string"
+			},
+			"file_path": {
+				"type": "string"
+			},
+			"username": {
+				"type": "string"
+			},
+			"db_server_name": {
+				"type": "string"
+			},
+			"select_stmt": {
+				"type": "string"
+			},
+			"query_filter_conditions": {
+				"type": "string"
+			},
+			"query_incr_filter": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"error_throw": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "00_Ingestion_Framework/05_Hardelete"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-12-09T07:59:01Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

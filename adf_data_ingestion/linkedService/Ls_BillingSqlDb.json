@@ -1,0 +1,27 @@
+{
+	"name": "Ls_BillingSqlDb",
+	"properties": {
+		"parameters": {
+			"secret_name": {
+				"type": "string"
+			}
+		},
+		"annotations": [
+			"Framework de Ingestion"
+		],
+		"type": "AzureSqlDatabase",
+		"typeProperties": {
+			"connectionString": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "Ls_AzureKeyVault",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": {
+					"value": "@linkedService().secret_name",
+					"type": "Expression"
+				}
+			}
+		}
+	}
+}

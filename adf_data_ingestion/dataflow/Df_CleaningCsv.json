@@ -1,0 +1,35 @@
+{
+	"name": "Df_CleaningCsv",
+	"properties": {
+		"folder": {
+			"name": "Ingestion"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "Ds_FileCsv",
+						"type": "DatasetReference"
+					},
+					"name": "cleaningColumnNamesAndEOLChar"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "Ds_BronzeParquet",
+						"type": "DatasetReference"
+					},
+					"name": "stagingToBronze"
+				}
+			],
+			"transformations": [
+				{
+					"name": "removeNonAlphanumerics"
+				}
+			],
+			"script": "parameters{\n\tstaging_path as string,\n\tfile_path as string,\n\tobj_name as string\n}\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\trowUrlColumn: 'EXTRACTED_DATE') ~> cleaningColumnNamesAndEOLChar\ncleaningColumnNamesAndEOLChar select(mapColumn(\n\t\teach(match(true()),\n\t\t\tregexReplace($$,\"[^a-zA-Z0-9]\",\"_\") = $$)\n\t),\n\tskipDuplicateMapInputs: false,\n\tskipDuplicateMapOutputs: false) ~> removeNonAlphanumerics\nremoveNonAlphanumerics sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tformat: 'parquet',\n\tumask: 0022,\n\tpreCommands: [],\n\tpostCommands: []) ~> stagingToBronze"
+		}
+	}
+}

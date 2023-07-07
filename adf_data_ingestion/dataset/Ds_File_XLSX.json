@@ -1,0 +1,60 @@
+{
+	"name": "Ds_File_XLSX",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Ls_AzureDataLakePrecioPiso",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"Filesystem": {
+				"type": "string"
+			},
+			"File": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "Excel",
+		"typeProperties": {
+			"sheetName": "Hoja1",
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@dataset().File",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@dataset().Filesystem",
+					"type": "Expression"
+				}
+			},
+			"firstRowAsHeader": true
+		},
+		"schema": [
+			{
+				"name": "Sucursal",
+				"type": "String"
+			},
+			{
+				"name": "Linea",
+				"type": "String"
+			},
+			{
+				"name": "FactorVta",
+				"type": "String"
+			},
+			{
+				"name": "FactorDist",
+				"type": "String"
+			},
+			{
+				"name": "FactorCryo",
+				"type": "String"
+			},
+			{
+				"name": "FactorAdm",
+				"type": "String"
+			}
+		]
+	}
+}

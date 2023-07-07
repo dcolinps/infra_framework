@@ -1,0 +1,934 @@
+{
+	"name": "ing_bronze_oracle",
+	"properties": {
+		"activities": [
+			{
+				"name": "Delete Parquet files if already exists",
+				"type": "Delete",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "Ds_BronzeParquet",
+						"type": "DatasetReference",
+						"parameters": {
+							"bronze_path": {
+								"value": "@pipeline().parameters.file_path",
+								"type": "Expression"
+							}
+						}
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"wildcardFileName": "*"
+					}
+				}
+			},
+			{
+				"name": "Switch based on Load Type and Split By",
+				"type": "Switch",
+				"dependsOn": [
+					{
+						"activity": "Delete Parquet files if already exists",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@concat(pipeline().parameters.load_type, ' - no splitby ',\nstring(empty(pipeline().parameters.split_by_col))\n)",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "F - no splitby True",
+							"activities": [
+								{
+									"name": "Copy data - Full Load No Split By",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "OracleSource",
+											"oracleReaderQuery": {
+												"value": "@pipeline().parameters.select_stmt",
+												"type": "Expression"
+											},
+											"partitionOption": "None",
+											"queryTimeout": "03:00:00"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings",
+												"maxConcurrentConnections": 10,
+												"blockSizeInMB": 20
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"parallelCopies": 32,
+										"dataIntegrationUnits": 32,
+										"jobPartitions": 2,
+										"maxMemoryLimit": 21474836480
+									},
+									"inputs": [
+										{
+											"referenceName": "Ds_OracleTable",
+											"type": "DatasetReference",
+											"parameters": {
+												"secret_name": {
+													"value": "@pipeline().parameters.conn_vault_name",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "Ds_BronzeParquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"bronze_path": {
+													"value": "@pipeline().parameters.file_path",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "Update Bronze Status in OBJ_RUN_STATS1",
+									"type": "SqlServerStoredProcedure",
+									"dependsOn": [
+										{
+											"activity": "Copy data - Full Load No Split By",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 2,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"storedProcedureName": {
+											"value": "@{pipeline().globalParameters.abc_db_schema}.[SET_OBJ_RUN_STATS]",
+											"type": "Expression"
+										},
+										"storedProcedureParameters": {
+											"JOB_RUN_ID": {
+												"value": {
+													"value": "@pipeline().parameters.job_run_id",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"OBJ_ID": {
+												"value": {
+													"value": "@pipeline().parameters.obj_id",
+													"type": "Expression"
+												},
+												"type": "Int32"
+											},
+											"OBJ_RUN_ID": {
+												"value": {
+													"value": "@pipeline().parameters.obj_run_id",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"OBJ_STATUS": {
+												"value": "BRONZE_SUCCESS",
+												"type": "String"
+											},
+											"OPERATION_TYPE": {
+												"value": "UPDATE",
+												"type": "String"
+											},
+											"PIPELINE_RUN_ID": {
+												"value": {
+													"value": "@pipeline().RunId",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"SOURCE_COUNT": {
+												"value": {
+													"value": "@activity('Copy data - Full Load No Split By').output.rowsRead",
+													"type": "Expression"
+												},
+												"type": "Int64"
+											},
+											"SRC_NAME": {
+												"value": {
+													"value": "@pipeline().parameters.src_name",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"SRC_PATH": {
+												"value": null,
+												"type": "String"
+											},
+											"SRC_SCHEMA_ID": {
+												"value": {
+													"value": "@pipeline().parameters.src_schema_id",
+													"type": "Expression"
+												},
+												"type": "Int32"
+											},
+											"TARGET_COUNT": {
+												"value": {
+													"value": "@activity('Copy data - Full Load No Split By').output.rowsCopied",
+													"type": "Expression"
+												},
+												"type": "Int64"
+											},
+											"TGT_PATH": {
+												"value": {
+													"value": "@pipeline().parameters.file_path",
+													"type": "Expression"
+												},
+												"type": "String"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "Ls_AzureSqlDb",
+										"type": "LinkedServiceReference"
+									}
+								}
+							]
+						},
+						{
+							"value": "F - no splitby False",
+							"activities": [
+								{
+									"name": "Copy data - Full Load Splitby",
+									"type": "Copy",
+									"dependsOn": [
+										{
+											"activity": "Lookup Source Object",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "OracleSource",
+											"oracleReaderQuery": {
+												"value": "@concat(pipeline().parameters.select_stmt,' and ?AdfRangePartitionColumnName <= ?AdfRangePartitionUpbound AND ?AdfRangePartitionColumnName >= ?AdfRangePartitionLowbound ')",
+												"type": "Expression"
+											},
+											"partitionOption": "DynamicRange",
+											"partitionSettings": {
+												"partitionColumnName": {
+													"value": "@{pipeline().parameters.split_by_col}",
+													"type": "Expression"
+												},
+												"partitionUpperBound": {
+													"value": "@{activity('Lookup Source Object').output.firstRow.max_value}",
+													"type": "Expression"
+												},
+												"partitionLowerBound": {
+													"value": "@{activity('Lookup Source Object').output.firstRow.min_value}",
+													"type": "Expression"
+												}
+											},
+											"queryTimeout": "02:00:00"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings",
+												"maxConcurrentConnections": 10,
+												"blockSizeInMB": 20
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"parallelCopies": {
+											"value": "@int(pipeline().parameters.mappers)",
+											"type": "Expression"
+										},
+										"dataIntegrationUnits": 32,
+										"jobPartitions": 2,
+										"maxMemoryLimit": 21474836480
+									},
+									"inputs": [
+										{
+											"referenceName": "Ds_OracleTable",
+											"type": "DatasetReference",
+											"parameters": {
+												"secret_name": {
+													"value": "@pipeline().parameters.conn_vault_name",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "Ds_BronzeParquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"bronze_path": {
+													"value": "@pipeline().parameters.file_path",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "Lookup Source Object",
+									"type": "Lookup",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "OracleSource",
+											"oracleReaderQuery": {
+												"value": "@concat('select coalesce(min(',pipeline().parameters.split_by_col,'),0) as min_value,\ncoalesce(max(',pipeline().parameters.split_by_col,'),0) as max_value  \nfrom (',pipeline().parameters.select_stmt,\n' )'\n)",
+												"type": "Expression"
+											},
+											"partitionOption": "None",
+											"queryTimeout": "02:00:00"
+										},
+										"dataset": {
+											"referenceName": "Ds_OracleTable",
+											"type": "DatasetReference",
+											"parameters": {
+												"secret_name": {
+													"value": "@pipeline().parameters.conn_vault_name",
+													"type": "Expression"
+												}
+											}
+										},
+										"firstRowOnly": true
+									}
+								},
+								{
+									"name": "Update Bronze Status in OBJ_RUN_STATS2",
+									"type": "SqlServerStoredProcedure",
+									"dependsOn": [
+										{
+											"activity": "Copy data - Full Load Splitby",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 2,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"storedProcedureName": {
+											"value": "@{pipeline().globalParameters.abc_db_schema}.[SET_OBJ_RUN_STATS]",
+											"type": "Expression"
+										},
+										"storedProcedureParameters": {
+											"JOB_RUN_ID": {
+												"value": {
+													"value": "@pipeline().parameters.job_run_id",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"OBJ_ID": {
+												"value": {
+													"value": "@pipeline().parameters.obj_id",
+													"type": "Expression"
+												},
+												"type": "Int32"
+											},
+											"OBJ_RUN_ID": {
+												"value": {
+													"value": "@pipeline().parameters.obj_run_id",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"OBJ_STATUS": {
+												"value": "BRONZE_SUCCESS",
+												"type": "String"
+											},
+											"OPERATION_TYPE": {
+												"value": "UPDATE",
+												"type": "String"
+											},
+											"PIPELINE_RUN_ID": {
+												"value": {
+													"value": "@pipeline().RunId",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"SOURCE_COUNT": {
+												"value": {
+													"value": "@activity('Copy data - Full Load Splitby').output.rowsRead",
+													"type": "Expression"
+												},
+												"type": "Int64"
+											},
+											"SRC_NAME": {
+												"value": {
+													"value": "@pipeline().parameters.src_name",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"SRC_PATH": {
+												"value": null,
+												"type": "String"
+											},
+											"SRC_SCHEMA_ID": {
+												"value": {
+													"value": "@pipeline().parameters.src_schema_id",
+													"type": "Expression"
+												},
+												"type": "Int32"
+											},
+											"TARGET_COUNT": {
+												"value": {
+													"value": "@activity('Copy data - Full Load Splitby').output.rowsCopied",
+													"type": "Expression"
+												},
+												"type": "Int64"
+											},
+											"TGT_PATH": {
+												"value": {
+													"value": "@pipeline().parameters.file_path",
+													"type": "Expression"
+												},
+												"type": "String"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "Ls_AzureSqlDb",
+										"type": "LinkedServiceReference"
+									}
+								}
+							]
+						},
+						{
+							"value": "I - no splitby True",
+							"activities": [
+								{
+									"name": "Copy data Incremental",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "OracleSource",
+											"oracleReaderQuery": {
+												"value": "@pipeline().parameters.select_stmt",
+												"type": "Expression"
+											},
+											"partitionOption": "None",
+											"queryTimeout": "02:00:00"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings",
+												"maxConcurrentConnections": 10,
+												"blockSizeInMB": 20
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"parallelCopies": 32,
+										"dataIntegrationUnits": 32,
+										"jobPartitions": 2,
+										"maxMemoryLimit": 21474836480
+									},
+									"inputs": [
+										{
+											"referenceName": "Ds_OracleTable",
+											"type": "DatasetReference",
+											"parameters": {
+												"secret_name": {
+													"value": "@pipeline().parameters.conn_vault_name",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "Ds_BronzeParquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"bronze_path": {
+													"value": "@pipeline().parameters.file_path",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "Update Bronze Status in OBJ_RUN_STATS3",
+									"type": "SqlServerStoredProcedure",
+									"dependsOn": [
+										{
+											"activity": "Copy data Incremental",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 2,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"storedProcedureName": {
+											"value": "@{pipeline().globalParameters.abc_db_schema}.[SET_OBJ_RUN_STATS]",
+											"type": "Expression"
+										},
+										"storedProcedureParameters": {
+											"JOB_RUN_ID": {
+												"value": {
+													"value": "@pipeline().parameters.job_run_id",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"OBJ_ID": {
+												"value": {
+													"value": "@pipeline().parameters.obj_id",
+													"type": "Expression"
+												},
+												"type": "Int32"
+											},
+											"OBJ_RUN_ID": {
+												"value": {
+													"value": "@pipeline().parameters.obj_run_id",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"OBJ_STATUS": {
+												"value": "BRONZE_SUCCESS",
+												"type": "String"
+											},
+											"OPERATION_TYPE": {
+												"value": "UPDATE",
+												"type": "String"
+											},
+											"PIPELINE_RUN_ID": {
+												"value": {
+													"value": "@pipeline().RunId",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"SOURCE_COUNT": {
+												"value": {
+													"value": "@activity('Copy data Incremental').output.rowsRead",
+													"type": "Expression"
+												},
+												"type": "Int64"
+											},
+											"SRC_NAME": {
+												"value": {
+													"value": "@pipeline().parameters.src_name",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"SRC_PATH": {
+												"value": null,
+												"type": "String"
+											},
+											"SRC_SCHEMA_ID": {
+												"value": {
+													"value": "@pipeline().parameters.src_schema_id",
+													"type": "Expression"
+												},
+												"type": "Int32"
+											},
+											"TARGET_COUNT": {
+												"value": {
+													"value": "@activity('Copy data Incremental').output.rowsCopied",
+													"type": "Expression"
+												},
+												"type": "Int64"
+											},
+											"TGT_PATH": {
+												"value": {
+													"value": "@pipeline().parameters.file_path",
+													"type": "Expression"
+												},
+												"type": "String"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "Ls_AzureSqlDb",
+										"type": "LinkedServiceReference"
+									}
+								}
+							]
+						},
+						{
+							"value": "I - no splitby False",
+							"activities": [
+								{
+									"name": "Copy data - Incr Load Splitby",
+									"type": "Copy",
+									"dependsOn": [
+										{
+											"activity": "Lookup Source Object1",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "OracleSource",
+											"oracleReaderQuery": {
+												"value": "@concat(pipeline().parameters.select_stmt,' and ?AdfRangePartitionColumnName <= ?AdfRangePartitionUpbound AND ?AdfRangePartitionColumnName >= ?AdfRangePartitionLowbound ')",
+												"type": "Expression"
+											},
+											"partitionOption": "DynamicRange",
+											"partitionSettings": {
+												"partitionColumnName": {
+													"value": "@{pipeline().parameters.split_by_col}",
+													"type": "Expression"
+												},
+												"partitionUpperBound": {
+													"value": "@{activity('Lookup Source Object1').output.firstRow.max_value}",
+													"type": "Expression"
+												},
+												"partitionLowerBound": {
+													"value": "@{activity('Lookup Source Object1').output.firstRow.min_value}",
+													"type": "Expression"
+												}
+											},
+											"queryTimeout": "02:00:00"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings",
+												"maxConcurrentConnections": 10,
+												"blockSizeInMB": 20
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"parallelCopies": {
+											"value": "@int(pipeline().parameters.mappers)",
+											"type": "Expression"
+										},
+										"dataIntegrationUnits": 32,
+										"jobPartitions": 2,
+										"maxMemoryLimit": 21474836480
+									},
+									"inputs": [
+										{
+											"referenceName": "Ds_OracleTable",
+											"type": "DatasetReference",
+											"parameters": {
+												"secret_name": {
+													"value": "@pipeline().parameters.conn_vault_name",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "Ds_BronzeParquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"bronze_path": {
+													"value": "@pipeline().parameters.file_path",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "Lookup Source Object1",
+									"type": "Lookup",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "OracleSource",
+											"oracleReaderQuery": {
+												"value": "@concat('select coalesce(min(',pipeline().parameters.split_by_col,'),0) as min_value,\ncoalesce(max(',pipeline().parameters.split_by_col,'),0) as max_value  \nfrom (',pipeline().parameters.select_stmt,\n' )'\n)",
+												"type": "Expression"
+											},
+											"partitionOption": "None",
+											"queryTimeout": "02:00:00"
+										},
+										"dataset": {
+											"referenceName": "Ds_OracleTable",
+											"type": "DatasetReference",
+											"parameters": {
+												"secret_name": {
+													"value": "@pipeline().parameters.conn_vault_name",
+													"type": "Expression"
+												}
+											}
+										}
+									}
+								},
+								{
+									"name": "Update Bronze Status in OBJ_RUN_STATS4",
+									"type": "SqlServerStoredProcedure",
+									"dependsOn": [
+										{
+											"activity": "Copy data - Incr Load Splitby",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 2,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"storedProcedureName": {
+											"value": "@{pipeline().globalParameters.abc_db_schema}.[SET_OBJ_RUN_STATS]",
+											"type": "Expression"
+										},
+										"storedProcedureParameters": {
+											"JOB_RUN_ID": {
+												"value": {
+													"value": "@pipeline().parameters.job_run_id",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"OBJ_ID": {
+												"value": {
+													"value": "@pipeline().parameters.obj_id",
+													"type": "Expression"
+												},
+												"type": "Int32"
+											},
+											"OBJ_RUN_ID": {
+												"value": {
+													"value": "@pipeline().parameters.obj_run_id",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"OBJ_STATUS": {
+												"value": "BRONZE_SUCCESS",
+												"type": "String"
+											},
+											"OPERATION_TYPE": {
+												"value": "UPDATE",
+												"type": "String"
+											},
+											"PIPELINE_RUN_ID": {
+												"value": {
+													"value": "@pipeline().RunId",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"SOURCE_COUNT": {
+												"value": {
+													"value": "@activity('Copy data - Incr Load Splitby').output.rowsRead",
+													"type": "Expression"
+												},
+												"type": "Int64"
+											},
+											"SRC_NAME": {
+												"value": {
+													"value": "@pipeline().parameters.src_name",
+													"type": "Expression"
+												},
+												"type": "String"
+											},
+											"SRC_PATH": {
+												"value": null,
+												"type": "String"
+											},
+											"SRC_SCHEMA_ID": {
+												"value": {
+													"value": "@pipeline().parameters.src_schema_id",
+													"type": "Expression"
+												},
+												"type": "Int32"
+											},
+											"TARGET_COUNT": {
+												"value": {
+													"value": "@activity('Copy data - Incr Load Splitby').output.rowsCopied",
+													"type": "Expression"
+												},
+												"type": "Int64"
+											},
+											"TGT_PATH": {
+												"value": {
+													"value": "@pipeline().parameters.file_path",
+													"type": "Expression"
+												},
+												"type": "String"
+											}
+										}
+									},
+									"linkedServiceName": {
+										"referenceName": "Ls_AzureSqlDb",
+										"type": "LinkedServiceReference"
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"schema_name": {
+				"type": "string"
+			},
+			"obj_name": {
+				"type": "string"
+			},
+			"select_stmt": {
+				"type": "string"
+			},
+			"split_by_col": {
+				"type": "string"
+			},
+			"conn_vault_name": {
+				"type": "string"
+			},
+			"file_path": {
+				"type": "string"
+			},
+			"load_type": {
+				"type": "string"
+			},
+			"mappers": {
+				"type": "string"
+			},
+			"obj_id": {
+				"type": "string"
+			},
+			"obj_run_id": {
+				"type": "string"
+			},
+			"job_run_id": {
+				"type": "string"
+			},
+			"src_name": {
+				"type": "string"
+			},
+			"src_schema_id": {
+				"type": "string"
+			},
+			"batch_run_id": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"ErrorCatch": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "00_Ingestion_Framework/01_ingestion"
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

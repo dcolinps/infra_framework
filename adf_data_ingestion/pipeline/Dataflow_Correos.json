@@ -1,0 +1,72 @@
+{
+	"name": "Dataflow_Correos",
+	"properties": {
+		"activities": [
+			{
+				"name": "Data_flow_Correos",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "1.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "Df_Sabana_Correos",
+						"type": "DataFlowReference",
+						"datasetParameters": {
+							"MaestroCte": {
+								"cw_schema": {
+									"value": "@pipeline().parameters.cw_schema",
+									"type": "Expression"
+								},
+								"cw_table": {
+									"value": "@pipeline().parameters.sourceTableFromPL",
+									"type": "Expression"
+								}
+							},
+							"Correos": {
+								"cw_schema": {
+									"value": "@pipeline().parameters.cw_schema",
+									"type": "Expression"
+								},
+								"cw_table": {
+									"value": "@pipeline().parameters.sinkTableFroPL",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "Fine"
+				}
+			}
+		],
+		"parameters": {
+			"sourceTableFromPL": {
+				"type": "string",
+				"defaultValue": "TMAZCTMSTGCTE01"
+			},
+			"sinkTableFroPL": {
+				"type": "string",
+				"defaultValue": "Test_Correos"
+			},
+			"cw_schema": {
+				"type": "string",
+				"defaultValue": "dbo"
+			}
+		},
+		"folder": {
+			"name": "03_Correo"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-03-24T04:15:19Z"
+	}
+}
